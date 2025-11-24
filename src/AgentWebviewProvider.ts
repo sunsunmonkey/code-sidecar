@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 export class AgentWebviewProvider implements vscode.WebviewViewProvider {
+  private webview: vscode.Webview | undefined;
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   resolveWebviewView(
@@ -7,6 +8,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     context: vscode.WebviewViewResolveContext,
     token: vscode.CancellationToken
   ): Thenable<void> | void {
+    this.webview = webviewView.webview;
+
     const scriptUri = webviewView.webview.asWebviewUri(
       vscode.Uri.joinPath(
         this.context.extensionUri,
@@ -45,5 +48,13 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   </body>
 </html>
 `;
+
+    webviewView.webview.onDidReceiveMessage(async (message: string) => {
+      vscode.window.showInformationMessage(message);
+    });
+  }
+
+  postMessage(message: string) {
+    this.webview?.postMessage(message);
   }
 }

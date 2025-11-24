@@ -1,16 +1,25 @@
 import { useState } from "react";
+import { useEvent } from "react-use";
 import "./App.css";
+const vscode = acquireVsCodeApi();
 
 function App() {
-  const [count, setCount] = useState(0);
+  const [message, setMessage] = useState("");
+  useEvent("message", (e: MessageEvent) => {
+    console.log(e.data);
+    setMessage(e.data);
+  });
+
+  const postMessage = async () => {
+    vscode.postMessage("Hello World");
+  };
 
   return (
     <>
+      <p>{message}111</p>
       <h1>Vite + React</h1>
       <div className="card">
-        <button onClick={() => setCount((count) => count + 1)}>
-          count is {count}
-        </button>
+        <button onClick={postMessage}>postMessage</button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
