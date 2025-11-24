@@ -17,7 +17,25 @@
         "command": "coding-agent-slim.helloWorld",
         "title": "Hello World"
       }
-    ]
+    ],
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "coding-agent-slim-ActivityBar",
+          "title": "Coding Agent Slim",
+          "icon": "assets/icons/icon.svg"
+        }
+      ]
+    },
+    "views": {
+      "coding-agent-slim-ActivityBar": [
+        {
+          "type": "webview",
+          "id": "coding-agent-slim.SidebarProvider",
+          "name": "Coding Agent Slim"
+        }
+      ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "pnpm run package",
