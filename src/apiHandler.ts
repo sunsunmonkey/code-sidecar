@@ -29,8 +29,8 @@ export class ApiHandler {
       .withResponse();
 
     for await (const chunk of completion) {
-      if (chunk.choices[0].delta) {
-        yield chunk.choices[0].delta;
+      if (chunk.choices[0].delta.content) {
+        yield chunk.choices[0].delta.content;
       }
     }
   }

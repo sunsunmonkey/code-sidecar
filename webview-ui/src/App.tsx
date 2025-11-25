@@ -1,6 +1,7 @@
 import { useRef, useState } from "react";
 import { useEvent } from "react-use";
 import "./App.css";
+import { MarkdownHooks } from "react-markdown";
 const vscode = acquireVsCodeApi();
 
 function App() {
@@ -8,8 +9,7 @@ function App() {
   const input = useRef<HTMLInputElement>(null);
 
   useEvent("message", (e: MessageEvent) => {
-    console.log(e.data);
-    setMessage(e.data);
+    setMessage(message + e.data);
   });
 
   const postMessage = async () => {
@@ -18,7 +18,7 @@ function App() {
 
   return (
     <>
-      <p>{message}</p>
+      <MarkdownHooks>{message}</MarkdownHooks>
       <div className="card">
         <input ref={input}></input>
         <button onClick={postMessage}>postMessage</button>
