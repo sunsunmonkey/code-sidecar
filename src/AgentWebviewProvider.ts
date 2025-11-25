@@ -1,6 +1,15 @@
 import * as vscode from "vscode";
+import { Task } from "./task";
+import { ApiConfiguration } from "./apiHandler";
+
 export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private webview: vscode.Webview | undefined;
+  private currentTask: Task | undefined = undefined;
+  private apiConfiguration: ApiConfiguration = {
+    model: "tencent/Hunyuan-MT-7B",
+    apiKey: "sk-lhnpwtcdxoisnmrpvcdgzuaqdrqtpjlrebdbzikldxgqtvbl",
+    baseUrl: "https://api.siliconflow.cn/v1/",
+  };
   constructor(private readonly context: vscode.ExtensionContext) {}
 
   resolveWebviewView(
@@ -51,6 +60,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     webviewView.webview.onDidReceiveMessage(async (message: string) => {
       vscode.window.showInformationMessage(message);
+      this.currentTask = new Task(this.apiConfiguration, message);
+      this.currentTask.start();
     });
   }
 
