@@ -58,7 +58,8 @@ export type WebviewMessage =
   | { type: 'mode_changed'; mode: WorkMode }
   | { type: 'conversation_cleared' }
   | { type: 'operation_recorded'; operation: OperationRecord }
-  | { type: 'operation_history'; operations: OperationRecord[] };
+  | { type: 'operation_history'; operations: OperationRecord[] }
+  | { type: 'navigate'; route: string };
 
 /**
  * Messages sent from webview to extension

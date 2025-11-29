@@ -1,8 +1,8 @@
 import { Tool, ToolDefinition } from './Tool';
-import { ToolUse, ToolResult } from '../task';
-import { PermissionManager, PermissionRequest } from '../PermissionManager';
-import { OperationHistoryManager } from '../OperationHistoryManager';
-import { ErrorHandler, ErrorContext } from '../ErrorHandler';
+import { ToolUse, ToolResult } from '../core/task';
+import { PermissionManager, PermissionRequest } from '../managers/PermissionManager';
+import { OperationHistoryManager } from '../managers/OperationHistoryManager';
+import { ErrorHandler, ErrorContext } from '../managers/ErrorHandler';
 
 /**
  * ToolExecutor manages tool registration and execution

@@ -1,0 +1,77 @@
+/**
+ * ConfigSection styles
+ * Shared styles for configuration sections
+ * Requirements: 8.5 - Section layout and error state styling
+ */
+
+.config-section {
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background-color: var(--vscode-editor-background);
+  transition: border-color 0.2s, background-color 0.2s;
+}
+
+.config-section h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin: 0 0 16px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+}
+
+/* Select dropdown styling */
+.config-section select.input-field {
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-input-foreground);
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 2px;
+  outline: none;
+  cursor: pointer;
+  transition: border-color 0.2s;
+  width: 100%;
+}
+
+.config-section select.input-field:hover {
+  border-color: var(--vscode-inputOption-activeBorder, var(--vscode-focusBorder));
+}
+
+.config-section select.input-field:focus {
+  border-color: var(--vscode-focusBorder);
+}
+
+/* Error state for sections - Requirements: 8.5 */
+.config-section.has-errors {
+  border-color: var(--vscode-inputValidation-errorBorder);
+  background-color: var(--vscode-inputValidation-errorBackground);
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .config-section {
+    padding: 12px;
+    margin-bottom: 12px;
+  }
+
+  .config-section h2 {
+    font-size: 15px;
+    margin-bottom: 12px;
+  }
+}
+
+@media (max-width: 400px) {
+  .config-section {
+    padding: 10px;
+    margin-bottom: 10px;
+  }
+
+  .config-section h2 {
+    font-size: 14px;
+    margin-bottom: 10px;
+  }
+}

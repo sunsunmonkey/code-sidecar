@@ -24,3 +24,56 @@ body {
   border-bottom: 1px solid var(--vscode-panel-border);
   flex-shrink: 0;
 }
+
+.app-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.config-button {
+  background: transparent;
+  border: 1px solid var(--vscode-button-border, transparent);
+  color: var(--vscode-button-foreground);
+  padding: 4px 8px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-size: 16px;
+  transition: background-color 0.2s;
+}
+
+.config-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}
+
+.config-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background-color: var(--vscode-sideBar-background);
+  border-bottom: 1px solid var(--vscode-panel-border);
+  flex-shrink: 0;
+}
+
+.config-header h2 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.back-button {
+  background: transparent;
+  border: 1px solid var(--vscode-button-border, transparent);
+  color: var(--vscode-button-foreground);
+  padding: 4px 12px;
+  cursor: pointer;
+  border-radius: 2px;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.back-button:hover {
+  background-color: var(--vscode-button-hoverBackground);
+}

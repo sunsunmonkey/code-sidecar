@@ -4,11 +4,15 @@ import { MessageList } from "./components/MessageList";
 import { InputBox } from "./components/InputBox";
 import { ModeSelector } from "./components/ModeSelector";
 import { OperationHistory } from "./components/OperationHistory";
-import type { DisplayMessage, WebviewMessage, ToolUse, ToolResult, WorkMode } from "./types";
-
-// Acquire VS Code API
-declare function acquireVsCodeApi(): any;
-const vscode = acquireVsCodeApi();
+import type {
+  DisplayMessage,
+  WebviewMessage,
+  ToolUse,
+  ToolResult,
+  WorkMode,
+} from "./types";
+import { useNavigate } from "react-router-dom";
+import { useVSCodeApi } from "./hooks";
 
 /**
  * Main App component for the AI Coding Assistant webview
@@ -16,10 +20,11 @@ const vscode = acquireVsCodeApi();
  */
 function App() {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
-  const [currentAssistantMessage, setCurrentAssistantMessage] = useState<DisplayMessage | null>(null);
+  const [currentAssistantMessage, setCurrentAssistantMessage] =
+    useState<DisplayMessage | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [currentMode, setCurrentMode] = useState<WorkMode>('code');
-
+  const [currentMode, setCurrentMode] = useState<WorkMode>("code");
+  const { vscode } = useVSCodeApi();
   /**
    * Handle messages from the extension
    * Requirements: 4.1, 4.2, 14.1, 14.2, 4.5
@@ -28,37 +33,42 @@ function App() {
     const message: WebviewMessage = event.data;
 
     switch (message.type) {
-      case 'stream_chunk':
+      case "stream_chunk":
         handleStreamChunk(message.content);
         break;
-      
-      case 'tool_call':
+
+      case "tool_call":
         handleToolCall(message.toolCall);
         break;
-      
-      case 'tool_result':
+
+      case "tool_result":
         handleToolResult(message.result);
         break;
-      
-      case 'error':
+
+      case "error":
         handleError(message.message);
         break;
-      
-      case 'task_complete':
+
+      case "task_complete":
         handleTaskComplete();
         break;
-      
-      case 'mode_changed':
+
+      case "mode_changed":
         // Update current mode when extension confirms the change
         // Requirement 7.6: Display current mode
         setCurrentMode(message.mode);
-        console.log('Mode changed to:', message.mode);
+        console.log("Mode changed to:", message.mode);
         break;
-      
-      case 'conversation_cleared':
+
+      case "conversation_cleared":
         // Handle conversation cleared confirmation from extension
         // Requirement 4.5: Support clearing conversation
         handleConversationCleared();
+        break;
+
+      case "navigate":
+        // Handle navigation request from extension
+        window.location.hash = `#${message.route}`;
         break;
     }
   }, []);
@@ -69,7 +79,7 @@ function App() {
    */
   const handleStreamChunk = (content: string) => {
     setIsProcessing(true);
-    
+
     setCurrentAssistantMessage((prev) => {
       if (prev) {
         // Append to existing message
@@ -82,7 +92,7 @@ function App() {
         // Create new assistant message
         return {
           id: `msg-${Date.now()}`,
-          role: 'assistant',
+          role: "assistant",
           content: content,
           timestamp: new Date(),
           isStreaming: true,
@@ -117,8 +127,8 @@ function App() {
     // Create a system message for the tool result
     const resultMessage: DisplayMessage = {
       id: `msg-${Date.now()}`,
-      role: 'system',
-      content: '',
+      role: "system",
+      content: "",
       timestamp: new Date(),
       toolResults: [result],
     };
@@ -133,7 +143,7 @@ function App() {
   const handleError = (errorMessage: string) => {
     const errorMsg: DisplayMessage = {
       id: `msg-${Date.now()}`,
-      role: 'system',
+      role: "system",
       content: errorMessage,
       timestamp: new Date(),
       isError: true,
@@ -156,7 +166,7 @@ function App() {
       ]);
       setCurrentAssistantMessage(null);
     }
-    
+
     setIsProcessing(false);
   };
 
@@ -170,7 +180,7 @@ function App() {
     // Add user message to display
     const userMessage: DisplayMessage = {
       id: `msg-${Date.now()}`,
-      role: 'user',
+      role: "user",
       content: content,
       timestamp: new Date(),
     };
@@ -180,7 +190,7 @@ function App() {
 
     // Send to extension
     vscode.postMessage({
-      type: 'user_message',
+      type: "user_message",
       content: content,
     });
   };
@@ -192,7 +202,7 @@ function App() {
   const clearConversation = () => {
     // Send clear conversation message to extension
     vscode.postMessage({
-      type: 'clear_conversation',
+      type: "clear_conversation",
     });
   };
 
@@ -204,7 +214,7 @@ function App() {
     setMessages([]);
     setCurrentAssistantMessage(null);
     setIsProcessing(false);
-    console.log('Conversation cleared');
+    console.log("Conversation cleared");
   };
 
   /**
@@ -214,10 +224,10 @@ function App() {
   const handleModeChange = (mode: WorkMode) => {
     // Send mode change message to extension
     vscode.postMessage({
-      type: 'mode_change',
+      type: "mode_change",
       mode: mode,
     });
-    
+
     // Optimistically update UI
     setCurrentMode(mode);
   };
@@ -226,10 +236,10 @@ function App() {
    * Set up message listener
    */
   useEffect(() => {
-    window.addEventListener('message', handleExtensionMessage);
-    
+    window.addEventListener("message", handleExtensionMessage);
+
     return () => {
-      window.removeEventListener('message', handleExtensionMessage);
+      window.removeEventListener("message", handleExtensionMessage);
     };
   }, [handleExtensionMessage]);
 
@@ -258,17 +268,34 @@ function App() {
     }
   }, [currentAssistantMessage]);
 
+  /**
+   * Navigate to config page
+   */
+  const navigate = useNavigate();
+
+  const navigateToConfig = () => {
+    console.log(111);
+    navigate("/config");
+  };
+
   return (
     <div className="app-container">
       <div className="app-header">
-        <ModeSelector 
+        <ModeSelector
           currentMode={currentMode}
           onModeChange={handleModeChange}
         />
+        <button
+          className="config-button"
+          onClick={navigateToConfig}
+          title="Open Configuration"
+        >
+          ⚙️
+        </button>
       </div>
       <OperationHistory vscode={vscode} />
       <MessageList messages={messages} />
-      <InputBox 
+      <InputBox
         onSend={sendMessage}
         onClear={clearConversation}
         disabled={isProcessing}

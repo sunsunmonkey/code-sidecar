@@ -1,0 +1,106 @@
+/**
+ * Input component styles
+ * Text, password, and number input fields with validation
+ * Requirements: 8.1 - Text input with labels, placeholders, and validation feedback
+ */
+
+.input-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-bottom: 16px;
+}
+
+.input-label {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--vscode-foreground);
+  user-select: none;
+}
+
+.input-field {
+  padding: 6px 8px;
+  font-size: 13px;
+  font-family: var(--vscode-font-family);
+  color: var(--vscode-input-foreground);
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+  border-radius: 2px;
+  outline: none;
+  transition: border-color 0.2s, background-color 0.2s;
+  width: 100%;
+}
+
+.input-field::placeholder {
+  color: var(--vscode-input-placeholderForeground);
+  opacity: 0.7;
+}
+
+.input-field:hover:not(:disabled) {
+  border-color: var(--vscode-inputOption-activeBorder, var(--vscode-focusBorder));
+}
+
+.input-field:focus {
+  border-color: var(--vscode-focusBorder);
+  background-color: var(--vscode-input-background);
+}
+
+.input-field:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  background-color: var(--vscode-input-background);
+}
+
+/* Error state styling - Requirements: 8.5 */
+.input-field.input-error {
+  border-color: var(--vscode-inputValidation-errorBorder);
+  background-color: var(--vscode-inputValidation-errorBackground);
+}
+
+.input-field.input-error:focus {
+  border-color: var(--vscode-inputValidation-errorBorder);
+}
+
+/* Error message styling - Requirements: 8.5 */
+.error-message {
+  font-size: 12px;
+  color: var(--vscode-inputValidation-errorForeground, var(--vscode-errorForeground));
+  margin-top: -2px;
+  line-height: 1.4;
+  display: flex;
+  align-items: flex-start;
+  gap: 4px;
+}
+
+.error-message::before {
+  content: '⚠';
+  flex-shrink: 0;
+}
+
+/* Number input specific styles */
+.input-field[type="number"] {
+  -moz-appearance: textfield;
+}
+
+.input-field[type="number"]::-webkit-inner-spin-button,
+.input-field[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Password input specific styles */
+.input-field[type="password"] {
+  font-family: monospace;
+  letter-spacing: 2px;
+}
+
+/* Required field styles */
+.input-group.required-field .input-label::after {
+  content: ' *';
+  color: var(--vscode-errorForeground);
+  font-weight: bold;
+}
+
+.input-field.required {
+  border-left: 3px solid var(--vscode-textLink-foreground);
+}

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
-import { OperationHistoryManager } from '../OperationHistoryManager';
+import { OperationHistoryManager } from '../managers/OperationHistoryManager';
 
 /**
  * ApplyDiffTool - applies precise code edits using diff format

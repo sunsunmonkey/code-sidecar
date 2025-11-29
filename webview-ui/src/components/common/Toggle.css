@@ -1,0 +1,101 @@
+/**
+ * Toggle component styles
+ * Switch control for boolean settings
+ * Requirements: 8.2 - Toggle switches with clear on/off states
+ */
+
+.toggle-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding: 8px 0;
+  gap: 12px;
+}
+
+.toggle-label {
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  flex: 1;
+  user-select: none;
+  line-height: 1.4;
+}
+
+.toggle {
+  position: relative;
+  width: 40px;
+  height: 20px;
+  border: none;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: background-color 0.2s, opacity 0.2s;
+  padding: 0;
+  outline: none;
+  flex-shrink: 0;
+}
+
+.toggle:focus {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+.toggle:focus-visible {
+  outline: 2px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+.toggle:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Off state */
+.toggle-off {
+  background-color: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, var(--vscode-panel-border));
+}
+
+.toggle-off:hover:not(:disabled) {
+  background-color: var(--vscode-inputOption-hoverBackground, var(--vscode-input-background));
+  border-color: var(--vscode-inputOption-activeBorder, var(--vscode-focusBorder));
+}
+
+/* On state */
+.toggle-on {
+  background-color: var(--vscode-button-background);
+  border: 1px solid var(--vscode-button-background);
+}
+
+.toggle-on:hover:not(:disabled) {
+  background-color: var(--vscode-button-hoverBackground);
+  border-color: var(--vscode-button-hoverBackground);
+}
+
+/* Slider (the moving circle) */
+.toggle-slider {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background-color: var(--vscode-foreground);
+  transition: transform 0.2s ease-in-out, background-color 0.2s;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.toggle-on .toggle-slider {
+  transform: translateX(20px);
+  background-color: var(--vscode-button-foreground);
+}
+
+/* Responsive adjustments */
+@media (max-width: 400px) {
+  .toggle-group {
+    gap: 8px;
+  }
+
+  .toggle-label {
+    font-size: 12px;
+  }
+}

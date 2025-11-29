@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { HistoryItem } from "./apiHandler";
+import { HistoryItem } from "../core/apiHandler";
 
 /**
  * Conversation history entry for persistence

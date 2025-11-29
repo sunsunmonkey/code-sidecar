@@ -1,0 +1,195 @@
+/**
+ * ConfigPanel styles
+ * Main configuration panel layout and styling
+ * Requirements: 8.5 - Error state styling and responsive layout
+ */
+
+.config-panel {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  width: 100%;
+  overflow-y: auto;
+  background-color: var(--vscode-sideBar-background);
+}
+
+/* Loading state */
+.config-loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 14px;
+  color: var(--vscode-foreground);
+  opacity: 0.7;
+}
+
+/* Header section */
+.config-header {
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--vscode-panel-border);
+  background-color: var(--vscode-editor-background);
+  flex-shrink: 0;
+}
+
+.config-header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin: 0 0 8px 0;
+}
+
+.config-description {
+  font-size: 13px;
+  color: var(--vscode-descriptionForeground);
+  margin: 0;
+  line-height: 1.5;
+}
+
+/* Content area */
+.config-content {
+  flex: 1;
+  padding: 16px 24px 24px;
+  overflow-y: auto;
+}
+
+/* Responsive layout for smaller screens */
+@media (max-width: 600px) {
+  .config-header {
+    padding: 16px;
+  }
+
+  .config-header h1 {
+    font-size: 18px;
+  }
+
+  .config-content {
+    padding: 12px 16px 16px;
+  }
+}
+
+/* Responsive layout for very small screens */
+@media (max-width: 400px) {
+  .config-header {
+    padding: 12px;
+  }
+
+  .config-header h1 {
+    font-size: 16px;
+  }
+
+  .config-description {
+    font-size: 12px;
+  }
+
+  .config-content {
+    padding: 8px 12px 12px;
+  }
+}
+
+/* Error state styling - applied to sections with validation errors */
+.config-section.has-errors {
+  border-color: var(--vscode-inputValidation-errorBorder);
+  background-color: var(--vscode-inputValidation-errorBackground);
+}
+
+/* Focus state for accessibility */
+.config-panel *:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 2px;
+}
+
+/* Smooth scrolling */
+.config-content {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for config content */
+.config-content::-webkit-scrollbar {
+  width: 10px;
+}
+
+.config-content::-webkit-scrollbar-track {
+  background: var(--vscode-scrollbarSlider-background);
+}
+
+.config-content::-webkit-scrollbar-thumb {
+  background: var(--vscode-scrollbarSlider-background);
+  border-radius: 5px;
+}
+
+.config-content::-webkit-scrollbar-thumb:hover {
+  background: var(--vscode-scrollbarSlider-hoverBackground);
+}
+
+.config-content::-webkit-scrollbar-thumb:active {
+  background: var(--vscode-scrollbarSlider-activeBackground);
+}
+
+/* First-time setup wizard banner */
+.setup-wizard-banner {
+  margin: 0 0 24px 0;
+  padding: 20px;
+  background-color: var(--vscode-textBlockQuote-background);
+  border-left: 4px solid var(--vscode-textLink-foreground);
+  border-radius: 4px;
+}
+
+.setup-wizard-content h2 {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--vscode-foreground);
+  margin: 0 0 12px 0;
+}
+
+.setup-wizard-content p {
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  margin: 0 0 12px 0;
+  line-height: 1.5;
+}
+
+.setup-steps {
+  margin: 0;
+  padding-left: 20px;
+  font-size: 13px;
+  color: var(--vscode-foreground);
+  line-height: 1.8;
+}
+
+.setup-steps li {
+  margin-bottom: 4px;
+}
+
+/* Required field indicator */
+.required-indicator {
+  font-size: 12px;
+  color: var(--vscode-errorForeground);
+  font-weight: normal;
+  margin-left: 8px;
+}
+
+/* First-time highlight for sections */
+.config-section.first-time-highlight {
+  border: 2px solid var(--vscode-textLink-foreground);
+  border-radius: 6px;
+  padding: 18px;
+  background-color: var(--vscode-editor-background);
+}
+
+/* Responsive adjustments for setup wizard */
+@media (max-width: 600px) {
+  .setup-wizard-banner {
+    padding: 16px;
+    margin: 0 0 16px 0;
+  }
+
+  .setup-wizard-content h2 {
+    font-size: 14px;
+  }
+
+  .setup-wizard-content p,
+  .setup-steps {
+    font-size: 12px;
+  }
+}

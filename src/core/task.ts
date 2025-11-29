@@ -1,10 +1,10 @@
 import { ApiConfiguration, ApiHandler, HistoryItem } from "./apiHandler";
-import { AgentWebviewProvider } from "./AgentWebviewProvider";
-import { ToolExecutor } from "./tools";
-import { PromptBuilder } from "./PromptBuilder";
+import { AgentWebviewProvider } from "../ui/AgentWebviewProvider";
+import { ToolExecutor } from "../tools";
+import { PromptBuilder } from "../managers/PromptBuilder";
 import { XMLParser } from "fast-xml-parser";
-import { ContextCollector, ProjectContext } from "./ContextCollector";
-import { ErrorHandler, ErrorContext } from "./ErrorHandler";
+import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
+import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
 
 /**
  * Text content in assistant message

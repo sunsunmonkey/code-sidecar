@@ -1,8 +1,7 @@
 import * as vscode from "vscode";
-import { AgentWebviewProvider } from "./AgentWebviewProvider";
-import { ConfigurationUI } from "./ConfigurationUI";
+import { AgentWebviewProvider } from "./ui/AgentWebviewProvider";
 
-export function activate(context: vscode.ExtensionContext) {
+export async function activate(context: vscode.ExtensionContext) {
   const provider = new AgentWebviewProvider(context);
 
   context.subscriptions.push(
@@ -18,13 +17,58 @@ export function activate(context: vscode.ExtensionContext) {
     })
   );
 
-  // Register configuration command (Requirements: 10.1, 10.2, 10.3, 10.4, 10.5)
-  const configUI = new ConfigurationUI(provider.getConfigurationManager());
+  // Register configuration command - navigates to config page in main webview
+  // Requirements: 1.1, 10.1, 10.2, 10.3, 10.4, 10.5
   context.subscriptions.push(
     vscode.commands.registerCommand("coding-agent-slim.configureApi", async () => {
-      await configUI.showConfigurationMenu();
+      await vscode.commands.executeCommand("coding-agent-slim.openConfiguration");
     })
   );
+
+  // Register command to open configuration interface (Requirement: 1.1)
+  context.subscriptions.push(
+    vscode.commands.registerCommand("coding-agent-slim.openConfiguration", () => {
+      // Focus the main webview and navigate to config page
+      vscode.commands.executeCommand("coding-agent-slim.SidebarProvider.focus");
+      provider.navigateToConfig();
+    })
+  );
+
+  // Check if API is configured and show setup wizard if needed (Requirement: 1.5)
+  await checkAndShowSetupWizard(context, provider.getConfigurationManager());
+}
+
+/**
+ * Check if API is configured and automatically open configuration interface if not
+ * Requirement: 1.5 - First-time setup wizard
+ * 
+ * @param context Extension context
+ * @param configManager Configuration manager instance
+ */
+async function checkAndShowSetupWizard(
+  context: vscode.ExtensionContext,
+  configManager: any
+): Promise<void> {
+  try {
+    // Check if this is the first activation (no API key configured)
+    const isConfigured = await configManager.isApiConfigured();
+    
+    if (!isConfigured) {
+      // Show welcome message and automatically open configuration interface
+      const result = await vscode.window.showInformationMessage(
+        'Welcome to AI Coding Assistant! Let\'s get you set up.',
+        'Configure Now',
+        'Later'
+      );
+
+      if (result === 'Configure Now') {
+        // Open the configuration webview
+        await vscode.commands.executeCommand('coding-agent-slim.openConfiguration');
+      }
+    }
+  } catch (error) {
+    console.error('[Extension] Failed to check configuration status:', error);
+  }
 }
 
 export function deactivate() {}

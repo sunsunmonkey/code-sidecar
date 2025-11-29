@@ -1,0 +1,113 @@
+/**
+ * ConfigActions styles
+ * Action buttons section for save, test, reset, import, export
+ * Requirements: 2.4, 5.1, 5.2, 6.1 - Action buttons with feedback
+ */
+
+.config-actions {
+  padding: 16px;
+  margin-bottom: 16px;
+  border: 1px solid var(--vscode-panel-border);
+  border-radius: 4px;
+  background-color: var(--vscode-editor-background);
+}
+
+.config-actions-primary {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.config-actions-secondary {
+  display: flex;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--vscode-panel-border);
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+/* Test result feedback - Requirements: 6.4, 6.5 */
+.test-result {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  margin-bottom: 12px;
+  border-radius: 2px;
+  font-size: 13px;
+  font-family: var(--vscode-font-family);
+  line-height: 1.4;
+  animation: test-result-fade-in 0.3s ease-in-out;
+}
+
+@keyframes test-result-fade-in {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.test-result-success {
+  color: var(--vscode-testing-iconPassed, #73bf69);
+  background-color: var(--vscode-inputValidation-infoBackground, rgba(100, 150, 255, 0.15));
+  border: 1px solid var(--vscode-inputValidation-infoBorder, var(--vscode-testing-iconPassed));
+}
+
+.test-result-error {
+  color: var(--vscode-errorForeground);
+  background-color: var(--vscode-inputValidation-errorBackground);
+  border: 1px solid var(--vscode-inputValidation-errorBorder);
+}
+
+.test-result-icon {
+  font-weight: bold;
+  font-size: 16px;
+  flex-shrink: 0;
+}
+
+.test-result-message {
+  flex: 1;
+  word-break: break-word;
+}
+
+/* Responsive adjustments */
+@media (max-width: 600px) {
+  .config-actions {
+    padding: 12px;
+  }
+
+  .config-actions-primary,
+  .config-actions-secondary {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 400px) {
+  .config-actions {
+    padding: 10px;
+  }
+
+  .config-actions-primary,
+  .config-actions-secondary {
+    gap: 6px;
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .config-actions-primary .button,
+  .config-actions-secondary .button {
+    width: 100%;
+  }
+
+  .test-result {
+    font-size: 12px;
+    padding: 6px 10px;
+  }
+}

@@ -20,6 +20,10 @@
       {
         "command": "coding-agent-slim.configureApi",
         "title": "Coding Agent: Configure API"
+      },
+      {
+        "command": "coding-agent-slim.openConfiguration",
+        "title": "Coding Agent: Open Configuration"
       }
     ],
     "viewsContainers": {

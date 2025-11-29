@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { ModeManager } from "./ModeManager";
-import { ToolExecutor } from "./tools";
+import { ToolExecutor } from "../tools";
 import * as os from "os";
 import * as path from "path";
 

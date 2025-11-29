@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { OperationRecord } from '../types';
+import type { OperationRecord } from '../types';
 import './OperationHistory.css';
 
 interface OperationHistoryProps {
