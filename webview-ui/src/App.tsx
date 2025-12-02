@@ -4,6 +4,7 @@ import { MessageList } from "./components/MessageList";
 import { InputBox } from "./components/InputBox";
 import { ModeSelector } from "./components/ModeSelector";
 import { OperationHistory } from "./components/OperationHistory";
+import { ConversationList } from "./components/ConversationList";
 import { ConfigPanel } from "./components/config/ConfigPanel";
 import type {
   DisplayMessage,
@@ -66,6 +67,16 @@ function App() {
         // Handle conversation cleared confirmation from extension
         // Requirement 4.5: Support clearing conversation
         handleConversationCleared();
+        break;
+
+      case "conversation_history":
+        // Handle conversation history loaded from extension
+        handleConversationHistoryLoaded(message.messages);
+        break;
+
+      case "conversation_switched":
+        // Conversation switched successfully
+        console.log("Switched to conversation:", message.conversationId);
         break;
 
       case "navigate":
@@ -227,13 +238,13 @@ function App() {
   };
 
   /**
-   * Clear conversation
+   * Clear conversation (same as new conversation)
    * Requirement 4.5: Support clearing conversation
    */
   const clearConversation = () => {
-    // Send clear conversation message to extension
+    // Send new conversation message to extension
     vscode.postMessage({
-      type: "clear_conversation",
+      type: "new_conversation",
     });
   };
 
@@ -246,6 +257,20 @@ function App() {
     setCurrentAssistantMessage(null);
     setIsProcessing(false);
     console.log("Conversation cleared");
+  };
+
+  /**
+   * Handle conversation history loaded from extension
+   */
+  const handleConversationHistoryLoaded = (historyMessages: DisplayMessage[]) => {
+    // Convert timestamp strings to Date objects
+    const convertedMessages = historyMessages.map(msg => ({
+      ...msg,
+      timestamp: new Date(msg.timestamp),
+    }));
+    
+    setMessages(convertedMessages);
+    console.log(`Loaded ${convertedMessages.length} messages from history`);
   };
 
   /**
@@ -304,10 +329,13 @@ function App() {
   };
 
   /**
-   * Set up message listener
+   * Set up message listener and load conversation history
    */
   useEffect(() => {
     window.addEventListener("message", handleExtensionMessage);
+
+    // Request conversation history when component mounts
+    vscode.postMessage({ type: "get_conversation_history" });
 
     return () => {
       window.removeEventListener("message", handleExtensionMessage);
@@ -356,6 +384,7 @@ function App() {
               ⚙️
             </button>
           </div>
+          <ConversationList vscode={vscode} />
           <OperationHistory vscode={vscode} />
           <MessageList
             messages={messages}

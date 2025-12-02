@@ -1,4 +1,4 @@
-import * as vscode from 'vscode';
+import * as vscode from "vscode";
 
 /**
  * Permission settings for tool operations
@@ -69,10 +69,10 @@ export class PermissionManager {
   constructor(settings?: Partial<PermissionSettings>) {
     // Default settings
     this.settings = {
-      allowReadByDefault: true,  // Requirement 5.3: Allow reads by default
+      allowReadByDefault: true, // Requirement 5.3: Allow reads by default
       allowWriteByDefault: false, // Requirement 5.4: Require confirmation for writes
       allowExecuteByDefault: false,
-      alwaysConfirm: ['delete', 'execute'], // Requirement 5.5: Always confirm dangerous operations
+      alwaysConfirm: ["delete", "execute"], // Requirement 5.5: Always confirm dangerous operations
       ...settings,
     };
   }
@@ -98,13 +98,15 @@ export class PermissionManager {
   /**
    * Check if an operation is allowed
    * Requirements: 5.1, 5.2, 5.3, 5.4, 5.5
-   * 
+   *
    * @param request Permission request details
    * @returns Promise<boolean> True if operation is allowed
    */
   async checkPermission(request: PermissionRequest): Promise<boolean> {
     // Check if this operation always requires confirmation (Requirement 5.5)
-    const requiresConfirmation = this.settings.alwaysConfirm.includes(request.operation);
+    const requiresConfirmation = this.settings.alwaysConfirm.includes(
+      request.operation
+    );
 
     if (requiresConfirmation) {
       return await this.requestUserConfirmation(request);
@@ -112,26 +114,32 @@ export class PermissionManager {
 
     // Check default permissions based on operation type
     switch (request.operation.toLowerCase()) {
-      case 'read':
+      case "read":
         // Requirement 5.3: Auto-approve reads if allowed by default
         if (this.settings.allowReadByDefault) {
-          console.log(`[PermissionManager] Auto-approved read operation: ${request.target}`);
+          console.log(
+            `[PermissionManager] Auto-approved read operation: ${request.target}`
+          );
           return true;
         }
         break;
 
-      case 'write':
-      case 'modify':
+      case "write":
+      case "modify":
         // Requirement 5.4: Check write permission setting
         if (this.settings.allowWriteByDefault) {
-          console.log(`[PermissionManager] Auto-approved write operation: ${request.target}`);
+          console.log(
+            `[PermissionManager] Auto-approved write operation: ${request.target}`
+          );
           return true;
         }
         break;
 
-      case 'execute':
+      case "execute":
         if (this.settings.allowExecuteByDefault) {
-          console.log(`[PermissionManager] Auto-approved execute operation: ${request.target}`);
+          console.log(
+            `[PermissionManager] Auto-approved execute operation: ${request.target}`
+          );
           return true;
         }
         break;
@@ -144,11 +152,13 @@ export class PermissionManager {
   /**
    * Request user confirmation for an operation
    * Requirements: 5.2, 5.5
-   * 
+   *
    * @param request Permission request details
    * @returns Promise<boolean> True if user approved
    */
-  private async requestUserConfirmation(request: PermissionRequest): Promise<boolean> {
+  private async requestUserConfirmation(
+    request: PermissionRequest
+  ): Promise<boolean> {
     // If webview provider is available, use webview for confirmation
     if (this.webviewProvider) {
       return await this.requestWebviewConfirmation(request);
@@ -159,16 +169,20 @@ export class PermissionManager {
     const result = await vscode.window.showWarningMessage(
       message,
       { modal: true },
-      'Allow',
-      'Deny'
+      "Allow",
+      "Deny"
     );
 
-    const approved = result === 'Allow';
-    
+    const approved = result === "Allow";
+
     if (approved) {
-      console.log(`[PermissionManager] User approved: ${request.toolName} - ${request.operation} on ${request.target}`);
+      console.log(
+        `[PermissionManager] User approved: ${request.toolName} - ${request.operation} on ${request.target}`
+      );
     } else {
-      console.log(`[PermissionManager] User denied: ${request.toolName} - ${request.operation} on ${request.target}`);
+      console.log(
+        `[PermissionManager] User denied: ${request.toolName} - ${request.operation} on ${request.target}`
+      );
     }
 
     return approved;
@@ -177,9 +191,13 @@ export class PermissionManager {
   /**
    * Request confirmation through webview
    */
-  private async requestWebviewConfirmation(request: PermissionRequest): Promise<boolean> {
-    const requestId = `perm-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
+  private async requestWebviewConfirmation(
+    request: PermissionRequest
+  ): Promise<boolean> {
+    const requestId = `perm-${Date.now()}-${Math.random()
+      .toString(36)
+      .substr(2, 9)}`;
+
     const requestWithId = {
       id: requestId,
       ...request,
@@ -187,7 +205,7 @@ export class PermissionManager {
 
     // Send permission request to webview
     this.webviewProvider.postMessageToWebview({
-      type: 'permission_request',
+      type: "permission_request",
       request: requestWithId,
     });
 
@@ -199,7 +217,9 @@ export class PermissionManager {
       setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
-          console.log(`[PermissionManager] Permission request ${requestId} timed out`);
+          console.log(
+            `[PermissionManager] Permission request ${requestId} timed out`
+          );
           resolve(false);
         }
       }, 5 * 60 * 1000);
@@ -208,13 +228,13 @@ export class PermissionManager {
 
   /**
    * Build a user-friendly confirmation message
-   * Requirement: 5.2
+   *
    */
   private buildConfirmationMessage(request: PermissionRequest): string {
     let message = `AI Agent wants to ${request.operation}:\n\n`;
     message += `Tool: ${request.toolName}\n`;
     message += `Target: ${request.target}\n`;
-    
+
     if (request.details) {
       message += `\nDetails:\n${request.details}`;
     }
@@ -231,7 +251,7 @@ export class PermissionManager {
       ...this.settings,
       ...settings,
     };
-    console.log('[PermissionManager] Settings updated:', this.settings);
+    console.log("[PermissionManager] Settings updated:", this.settings);
   }
 
   /**
@@ -250,8 +270,8 @@ export class PermissionManager {
       allowReadByDefault: true,
       allowWriteByDefault: false,
       allowExecuteByDefault: false,
-      alwaysConfirm: ['delete', 'execute'],
+      alwaysConfirm: ["delete", "execute"],
     };
-    console.log('[PermissionManager] Settings reset to defaults');
+    console.log("[PermissionManager] Settings reset to defaults");
   }
 }

@@ -107,6 +107,17 @@ export interface PermissionRequest {
 }
 
 /**
+ * Conversation summary for list display
+ */
+export interface ConversationSummary {
+  id: string;
+  timestamp: Date | string;
+  messageCount: number;
+  preview: string;
+  isCurrent: boolean;
+}
+
+/**
  * Messages sent from extension to webview
  */
 export type WebviewMessage =
@@ -119,6 +130,10 @@ export type WebviewMessage =
   | { type: "conversation_cleared" }
   | { type: "operation_recorded"; operation: OperationRecord }
   | { type: "operation_history"; operations: OperationRecord[] }
+  | { type: "conversation_history"; messages: DisplayMessage[] }
+  | { type: "conversation_list"; conversations: ConversationSummary[] }
+  | { type: "conversation_switched"; conversationId: string }
+  | { type: "conversation_deleted"; conversationId: string }
   | { type: "navigate"; route: string }
   | { type: "permission_request"; request: PermissionRequest };
 
@@ -129,8 +144,13 @@ export type UserMessage =
   | { type: "user_message"; content: string }
   | { type: "mode_change"; mode: WorkMode }
   | { type: "clear_conversation" }
+  | { type: "new_conversation" }
   | { type: "get_operation_history" }
   | { type: "clear_operation_history" }
+  | { type: "get_conversation_history" }
+  | { type: "get_conversation_list" }
+  | { type: "switch_conversation"; conversationId: string }
+  | { type: "delete_conversation"; conversationId: string }
   | { type: "permission_response"; requestId: string; approved: boolean };
 
 /**

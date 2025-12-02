@@ -50,6 +50,10 @@ export type WebviewMessage =
   | { type: "conversation_cleared" }
   | { type: "operation_recorded"; operation: OperationRecord }
   | { type: "operation_history"; operations: OperationRecord[] }
+  | { type: "conversation_history"; messages: any[] }
+  | { type: "conversation_list"; conversations: any[] }
+  | { type: "conversation_switched"; conversationId: string }
+  | { type: "conversation_deleted"; conversationId: string }
   | { type: "navigate"; route: string }
   | { type: "configuration_loaded"; config: any; isFirstTime?: boolean }
   | { type: "configuration_saved"; success: boolean; error?: string }
@@ -71,8 +75,13 @@ export type UserMessage =
   | { type: "user_message"; content: string }
   | { type: "mode_change"; mode: WorkMode }
   | { type: "clear_conversation" }
+  | { type: "new_conversation" }
   | { type: "get_operation_history" }
   | { type: "clear_operation_history" }
+  | { type: "get_conversation_history" }
+  | { type: "get_conversation_list" }
+  | { type: "switch_conversation"; conversationId: string }
+  | { type: "delete_conversation"; conversationId: string }
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: any }
   | { type: "test_connection"; apiConfig: any }
@@ -287,6 +296,36 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
+    // Handle get conversation history messages
+    if (message.type === "get_conversation_history") {
+      this.handleGetConversationHistory();
+      return;
+    }
+
+    // Handle new conversation
+    if (message.type === "new_conversation") {
+      this.handleNewConversation();
+      return;
+    }
+
+    // Handle get conversation list
+    if (message.type === "get_conversation_list") {
+      this.handleGetConversationList();
+      return;
+    }
+
+    // Handle switch conversation
+    if (message.type === "switch_conversation") {
+      this.handleSwitchConversation(message.conversationId);
+      return;
+    }
+
+    // Handle delete conversation
+    if (message.type === "delete_conversation") {
+      this.handleDeleteConversation(message.conversationId);
+      return;
+    }
+
     // Handle configuration messages
     if (message.type === "get_configuration") {
       await this.handleGetConfiguration();
@@ -457,6 +496,229 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         message: `Failed to get operation history: ${errorMessage}`,
       });
     }
+  }
+
+  /**
+   * Handle get conversation history request
+   */
+  private handleGetConversationHistory(): void {
+    try {
+      const messages = this.conversationHistoryManager.getMessages();
+      
+      // Convert HistoryItem[] to DisplayMessage format
+      const displayMessages = messages.map((msg: any, index: number) => {
+        let content = '';
+        
+        // Handle different content types
+        if (typeof msg.content === 'string') {
+          content = msg.content;
+        } else if (Array.isArray(msg.content)) {
+          // Handle content arrays (e.g., with images or tool results)
+          content = msg.content
+            .map((part: any) => {
+              if (typeof part === 'string') return part;
+              if (part.type === 'text') return part.text;
+              if (part.type === 'tool_result') return `[Tool Result: ${part.tool_name}]`;
+              return JSON.stringify(part);
+            })
+            .join('\n');
+        } else {
+          content = JSON.stringify(msg.content);
+        }
+
+        return {
+          id: `msg-${Date.now()}-${index}`,
+          role: msg.role,
+          content: content,
+          timestamp: new Date(),
+        };
+      });
+
+      // Send conversation history to webview
+      this.postMessageToWebview({
+        type: "conversation_history",
+        messages: displayMessages,
+      });
+
+      console.log(`[AgentWebviewProvider] Sent ${displayMessages.length} messages to webview`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        "[AgentWebviewProvider] Failed to get conversation history:",
+        error
+      );
+      this.postMessageToWebview({
+        type: "error",
+        message: `Failed to get conversation history: ${errorMessage}`,
+      });
+    }
+  }
+
+  /**
+   * Handle new conversation request
+   */
+  private handleNewConversation(): void {
+    try {
+      this.conversationHistoryManager.clearConversation();
+      
+      // Send empty conversation history to webview
+      this.postMessageToWebview({
+        type: "conversation_history",
+        messages: [],
+      });
+
+      this.postMessageToWebview({
+        type: "conversation_cleared",
+      });
+
+      console.log('[AgentWebviewProvider] New conversation started');
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        "[AgentWebviewProvider] Failed to start new conversation:",
+        error
+      );
+      this.postMessageToWebview({
+        type: "error",
+        message: `Failed to start new conversation: ${errorMessage}`,
+      });
+    }
+  }
+
+  /**
+   * Handle get conversation list request
+   */
+  private handleGetConversationList(): void {
+    try {
+      const conversations = this.conversationHistoryManager.getConversationHistory();
+      const currentId = this.conversationHistoryManager.getCurrentConversationId();
+      
+      // Format conversations for display
+      const formattedConversations = conversations.map(conv => ({
+        id: conv.id,
+        timestamp: conv.timestamp,
+        messageCount: conv.messages.length,
+        preview: this.getConversationPreview(conv.messages),
+        isCurrent: conv.id === currentId,
+      }));
+
+      // Sort by timestamp, newest first
+      formattedConversations.sort((a, b) => 
+        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      );
+
+      this.postMessageToWebview({
+        type: "conversation_list",
+        conversations: formattedConversations,
+      });
+
+      console.log(`[AgentWebviewProvider] Sent ${formattedConversations.length} conversations to webview`);
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        "[AgentWebviewProvider] Failed to get conversation list:",
+        error
+      );
+      this.postMessageToWebview({
+        type: "error",
+        message: `Failed to get conversation list: ${errorMessage}`,
+      });
+    }
+  }
+
+  /**
+   * Handle switch conversation request
+   */
+  private handleSwitchConversation(conversationId: string): void {
+    try {
+      const success = this.conversationHistoryManager.restoreConversation(conversationId);
+      
+      if (success) {
+        // Send the conversation messages to webview
+        this.handleGetConversationHistory();
+        
+        this.postMessageToWebview({
+          type: "conversation_switched",
+          conversationId: conversationId,
+        });
+
+        console.log(`[AgentWebviewProvider] Switched to conversation: ${conversationId}`);
+      } else {
+        this.postMessageToWebview({
+          type: "error",
+          message: `Failed to switch to conversation: ${conversationId}`,
+        });
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        "[AgentWebviewProvider] Failed to switch conversation:",
+        error
+      );
+      this.postMessageToWebview({
+        type: "error",
+        message: `Failed to switch conversation: ${errorMessage}`,
+      });
+    }
+  }
+
+  /**
+   * Handle delete conversation request
+   */
+  private handleDeleteConversation(conversationId: string): void {
+    console.log(`[AgentWebviewProvider] Received delete request for: ${conversationId}`);
+    try {
+      const success = this.conversationHistoryManager.deleteConversation(conversationId);
+      
+      console.log(`[AgentWebviewProvider] Delete result: ${success}`);
+      
+      if (success) {
+        this.postMessageToWebview({
+          type: "conversation_deleted",
+          conversationId: conversationId,
+        });
+
+        // Refresh conversation list
+        this.handleGetConversationList();
+
+        console.log(`[AgentWebviewProvider] Deleted conversation: ${conversationId}`);
+      } else {
+        console.warn(`[AgentWebviewProvider] Failed to delete conversation: ${conversationId}`);
+        this.postMessageToWebview({
+          type: "error",
+          message: `Failed to delete conversation: ${conversationId}`,
+        });
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      console.error(
+        "[AgentWebviewProvider] Failed to delete conversation:",
+        error
+      );
+      this.postMessageToWebview({
+        type: "error",
+        message: `Failed to delete conversation: ${errorMessage}`,
+      });
+    }
+  }
+
+  /**
+   * Get a preview of the conversation (first user message)
+   */
+  private getConversationPreview(messages: any[]): string {
+    const firstUserMessage = messages.find(msg => msg.role === 'user');
+    if (firstUserMessage) {
+      const content = typeof firstUserMessage.content === 'string' 
+        ? firstUserMessage.content 
+        : JSON.stringify(firstUserMessage.content);
+      return content.length > 100 ? content.substring(0, 100) + '...' : content;
+    }
+    return 'Empty conversation';
   }
 
   /**

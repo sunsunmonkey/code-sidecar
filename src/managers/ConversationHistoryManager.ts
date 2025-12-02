@@ -128,13 +128,43 @@ export class ConversationHistoryManager {
    * Requirement 4.5: Support clearing conversation
    */
   clearConversation(): void {
-    if (this.currentConversation) {
-      // Archive current conversation before clearing
+    if (this.currentConversation && this.currentConversation.messages.length > 0) {
+      // Archive current conversation before clearing only if it has messages
       this.archiveConversation(this.currentConversation);
     }
     
     this.startNewConversation();
     console.log('[ConversationHistoryManager] Conversation cleared');
+  }
+
+  /**
+   * Delete a conversation from history
+   */
+  deleteConversation(conversationId: string): boolean {
+    try {
+      const history = this.context.workspaceState.get<ConversationEntry[]>(
+        ConversationHistoryManager.HISTORY_KEY,
+        []
+      );
+      
+      const filteredHistory = history.filter(c => c.id !== conversationId);
+      
+      if (filteredHistory.length === history.length) {
+        console.warn(`[ConversationHistoryManager] Conversation not found: ${conversationId}`);
+        return false;
+      }
+      
+      this.context.workspaceState.update(
+        ConversationHistoryManager.HISTORY_KEY,
+        filteredHistory
+      );
+      
+      console.log(`[ConversationHistoryManager] Deleted conversation: ${conversationId}`);
+      return true;
+    } catch (error) {
+      console.error('[ConversationHistoryManager] Failed to delete conversation:', error);
+      return false;
+    }
   }
 
   /**
@@ -147,16 +177,17 @@ export class ConversationHistoryManager {
         ConversationHistoryManager.CURRENT_CONVERSATION_KEY
       );
       
-      if (stored) {
-        // Restore Date objects
-        this.currentConversation = {
+      if (stored && stored.messages && stored.messages.length > 0) {
+        // Archive the old conversation if it has messages
+        this.archiveConversation({
           ...stored,
           timestamp: new Date(stored.timestamp),
-        };
-        console.log(`[ConversationHistoryManager] Loaded conversation: ${this.currentConversation.id}`);
-      } else {
-        this.startNewConversation();
+        });
       }
+      
+      // Always start a new conversation on load
+      this.startNewConversation();
+      console.log('[ConversationHistoryManager] Started new conversation on initialization');
     } catch (error) {
       console.error('[ConversationHistoryManager] Failed to load conversation:', error);
       this.startNewConversation();
@@ -188,23 +219,35 @@ export class ConversationHistoryManager {
    */
   private archiveConversation(conversation: ConversationEntry): void {
     try {
+      // Don't archive empty conversations
+      if (!conversation.messages || conversation.messages.length === 0) {
+        return;
+      }
+
       const history = this.context.workspaceState.get<ConversationEntry[]>(
         ConversationHistoryManager.HISTORY_KEY,
         []
       );
       
-      // Add to history
-      history.push(conversation);
+      // Check if conversation already exists in history
+      const existingIndex = history.findIndex(c => c.id === conversation.id);
+      if (existingIndex >= 0) {
+        // Update existing conversation
+        history[existingIndex] = conversation;
+      } else {
+        // Add to history
+        history.push(conversation);
+      }
       
-      // Keep only recent conversations (limit to 10)
-      const recentHistory = history.slice(-10);
+      // Keep only recent conversations (limit to 50)
+      const recentHistory = history.slice(-50);
       
       this.context.workspaceState.update(
         ConversationHistoryManager.HISTORY_KEY,
         recentHistory
       );
       
-      console.log(`[ConversationHistoryManager] Archived conversation: ${conversation.id}`);
+      console.log(`[ConversationHistoryManager] Archived conversation: ${conversation.id} with ${conversation.messages.length} messages`);
     } catch (error) {
       console.error('[ConversationHistoryManager] Failed to archive conversation:', error);
     }
