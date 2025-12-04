@@ -1,52 +1,43 @@
-import * as vscode from 'vscode';
-import * as path from 'path';
-import { BaseTool, ParameterDefinition } from './Tool';
-import { OperationHistoryManager } from '../managers/OperationHistoryManager';
+import * as vscode from "vscode";
+import * as path from "path";
+import { BaseTool, ParameterDefinition } from "./Tool";
 
 /**
  * ApplyDiffTool - applies precise code edits using diff format
  * Requirements: 13.3
- * 
+ *
  * This tool applies code changes using a diff-like format. It searches for
  * the exact "search" text in the file and replaces it with "replace" text.
  * This allows for precise, context-aware code editing.
  * This tool requires user permission before execution.
  */
 export class ApplyDiffTool extends BaseTool {
-  readonly name = 'apply_diff';
-  readonly description = 'Apply precise code edits to a file by searching for exact text and replacing it. Use this for targeted code modifications.';
+  readonly name = "apply_diff";
+  readonly description =
+    "Apply precise code edits to a file by searching for exact text and replacing it. Use this for targeted code modifications.";
   readonly requiresPermission = true; // Modifying files requires permission
-  
+
   readonly parameters: ParameterDefinition[] = [
     {
-      name: 'path',
-      type: 'string',
+      name: "path",
+      type: "string",
       required: true,
-      description: 'The relative or absolute path to the file to edit',
+      description: "The relative or absolute path to the file to edit",
     },
     {
-      name: 'search',
-      type: 'string',
+      name: "search",
+      type: "string",
       required: true,
-      description: 'The exact text to search for in the file. Must match exactly including whitespace.',
+      description:
+        "The exact text to search for in the file. Must match exactly including whitespace.",
     },
     {
-      name: 'replace',
-      type: 'string',
+      name: "replace",
+      type: "string",
       required: true,
-      description: 'The text to replace the search text with',
+      description: "The text to replace the search text with",
     },
   ];
-
-  private operationHistoryManager?: OperationHistoryManager;
-
-  /**
-   * Set operation history manager for recording operations
-   * Requirements: 11.1, 11.2
-   */
-  setOperationHistoryManager(manager: OperationHistoryManager): void {
-    this.operationHistoryManager = manager;
-  }
 
   /**
    * Validate and normalize file path to prevent path traversal attacks
@@ -56,24 +47,26 @@ export class ApplyDiffTool extends BaseTool {
     // Get workspace folder
     const workspaceFolders = vscode.workspace.workspaceFolders;
     if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error('No workspace folder is open');
+      throw new Error("No workspace folder is open");
     }
 
     const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    
+
     // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(filePath) 
-      ? filePath 
+    const resolvedPath = path.isAbsolute(filePath)
+      ? filePath
       : path.join(workspaceRoot, filePath);
-    
+
     // Normalize the path to resolve .. and .
     const normalizedPath = path.normalize(resolvedPath);
-    
+
     // Check if the normalized path is within the workspace
     if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(`Access denied: Path '${filePath}' is outside the workspace`);
+      throw new Error(
+        `Access denied: Path '${filePath}' is outside the workspace`
+      );
     }
-    
+
     return normalizedPath;
   }
 
@@ -85,86 +78,82 @@ export class ApplyDiffTool extends BaseTool {
     const filePath = params.path as string;
     const searchText = params.search as string;
     const replaceText = params.replace as string;
-    
+
     try {
       // Validate and normalize the path
       const validatedPath = this.validatePath(filePath);
-      
+
       // Read the file
       const uri = vscode.Uri.file(validatedPath);
       const fileContent = await vscode.workspace.fs.readFile(uri);
-      const content = Buffer.from(fileContent).toString('utf-8');
-      
+      const content = Buffer.from(fileContent).toString("utf-8");
+
       // Check if search text exists in the file
       const searchIndex = content.indexOf(searchText);
       if (searchIndex === -1) {
         throw new Error(
           `Search text not found in file ${filePath}.\n` +
-          `Make sure the search text matches exactly, including whitespace and line endings.`
+            `Make sure the search text matches exactly, including whitespace and line endings.`
         );
       }
-      
+
       // Check if search text appears multiple times
       const secondOccurrence = content.indexOf(searchText, searchIndex + 1);
       if (secondOccurrence !== -1) {
         throw new Error(
           `Search text appears multiple times in file ${filePath}.\n` +
-          `Please provide more context in the search text to make it unique.`
+            `Please provide more context in the search text to make it unique.`
         );
       }
-      
+
       // Apply the replacement
       const newContent = content.replace(searchText, replaceText);
-      
+
       // Write the modified content back
-      const newContentBuffer = Buffer.from(newContent, 'utf-8');
+      const newContentBuffer = Buffer.from(newContent, "utf-8");
       await vscode.workspace.fs.writeFile(uri, newContentBuffer);
-      
+
       // Calculate statistics for feedback
-      const linesRemoved = searchText.split('\n').length;
-      const linesAdded = replaceText.split('\n').length;
+      const linesRemoved = searchText.split("\n").length;
+      const linesAdded = replaceText.split("\n").length;
       const linesDiff = linesAdded - linesRemoved;
-      const diffSign = linesDiff > 0 ? '+' : '';
-      
-      // Record operation in history (Requirements: 11.1, 11.2)
-      if (this.operationHistoryManager) {
-        this.operationHistoryManager.recordOperation({
-          type: 'file_edit',
-          target: filePath,
-          toolName: this.name,
-          description: `Applied diff: ${linesRemoved} lines removed, ${linesAdded} lines added`,
-          details: {
-            linesRemoved,
-            linesAdded,
-            contentPreview: replaceText.substring(0, 100) + (replaceText.length > 100 ? '...' : ''),
-          },
-        });
-      }
-      
+      const diffSign = linesDiff > 0 ? "+" : "";
+
       return (
         `Successfully applied diff to file: ${filePath}\n` +
         `Lines changed: ${linesRemoved} removed, ${linesAdded} added (${diffSign}${linesDiff} net)`
       );
-      
     } catch (error) {
       if (error instanceof Error) {
         // Check for specific error types
-        if (error.message.includes('Access denied')) {
+        if (error.message.includes("Access denied")) {
           throw error; // Re-throw security errors
         }
-        if (error.message.includes('Search text not found') || 
-            error.message.includes('appears multiple times')) {
+        if (
+          error.message.includes("Search text not found") ||
+          error.message.includes("appears multiple times")
+        ) {
           throw error; // Re-throw search-specific errors
         }
-        if (error.message.includes('ENOENT') || error.message.includes('FileNotFound')) {
+        if (
+          error.message.includes("ENOENT") ||
+          error.message.includes("FileNotFound")
+        ) {
           throw new Error(`File not found: ${filePath}`);
         }
-        if (error.message.includes('EACCES') || error.message.includes('permission')) {
+        if (
+          error.message.includes("EACCES") ||
+          error.message.includes("permission")
+        ) {
           throw new Error(`Permission denied: Cannot modify file ${filePath}`);
         }
       }
-      
-      throw new Error(`Failed to apply diff to ${filePath}: ${error instanceof Error ? error.message : String(error)}`);
+
+      throw new Error(
+        `Failed to apply diff to ${filePath}: ${
+          error instanceof Error ? error.message : String(error)
+        }`
+      );
     }
   }
 }

@@ -128,10 +128,6 @@ Each mode injects a different system prompt fragment via `PromptBuilder`. The mo
 - Persists history to extension global state
 - Supports clearing conversation
 
-**OperationHistoryManager** (`src/managers/OperationHistoryManager.ts`)
-- Records file operations (create, modify, delete)
-- Provides undo/redo capability
-- Persists to extension global state
 
 **ErrorHandler** (`src/managers/ErrorHandler.ts`)
 - Categorizes errors (network, API, file system, permission)

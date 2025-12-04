@@ -69,10 +69,10 @@ export class PermissionManager {
   constructor(settings?: Partial<PermissionSettings>) {
     // Default settings
     this.settings = {
-      allowReadByDefault: true, // Requirement 5.3: Allow reads by default
-      allowWriteByDefault: false, // Requirement 5.4: Require confirmation for writes
+      allowReadByDefault: true, //  Allow reads by default
+      allowWriteByDefault: false, // Require confirmation for writes
       allowExecuteByDefault: false,
-      alwaysConfirm: ["delete", "execute"], // Requirement 5.5: Always confirm dangerous operations
+      alwaysConfirm: ["delete", "execute"], // Always confirm dangerous operations
       ...settings,
     };
   }

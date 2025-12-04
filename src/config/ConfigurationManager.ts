@@ -86,13 +86,12 @@ export interface ExportedConfiguration {
 
 /**
  * ConfigurationManager handles reading, saving, and validating plugin configuration
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5, 2.2 (performance optimization)
  */
 export class ConfigurationManager {
   private static readonly CONFIG_SECTION = "codingAgent";
   private static readonly API_KEY_SECRET = "codingAgent.apiKey";
 
-  // Cache for configuration to reduce redundant reads (Requirement: 2.2)
+  // Cache for configuration to reduce redundant reads 
   private configCache: PluginConfiguration | null = null;
   private cacheTimestamp: number = 0;
   private readonly CACHE_TTL = 5000; // 5 seconds cache TTL
@@ -128,7 +127,6 @@ export class ConfigurationManager {
 
   /**
    * Get complete plugin configuration
-   * Requirements: 10.1, 10.2, 10.3, 2.2 (with caching for performance)
    *
    * @param forceRefresh - Force refresh from storage, bypassing cache
    * @returns Promise<PluginConfiguration> Complete configuration

@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
-import { OperationHistoryManager } from '../managers/OperationHistoryManager';
+
 
 /**
  * InsertContentTool - inserts content at a specific line in a file
@@ -38,15 +38,6 @@ export class InsertContentTool extends BaseTool {
     },
   ];
 
-  private operationHistoryManager?: OperationHistoryManager;
-
-  /**
-   * Set operation history manager for recording operations
-   * Requirements: 11.1, 11.2
-   */
-  setOperationHistoryManager(manager: OperationHistoryManager): void {
-    this.operationHistoryManager = manager;
-  }
 
   /**
    * Validate and normalize file path to prevent path traversal attacks
@@ -141,20 +132,6 @@ export class InsertContentTool extends BaseTool {
       // Calculate statistics for feedback
       const linesInserted = content.split('\n').length;
       const newTotalLines = newContent.split('\n').length;
-      
-      // Record operation in history (Requirements: 11.1, 11.2)
-      if (this.operationHistoryManager) {
-        this.operationHistoryManager.recordOperation({
-          type: 'file_insert',
-          target: filePath,
-          toolName: this.name,
-          description: `Inserted ${linesInserted} lines at line ${lineNumber}`,
-          details: {
-            linesAdded: linesInserted,
-            contentPreview: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
-          },
-        });
-      }
       
       return (
         `Successfully inserted content into file: ${filePath}\n` +

@@ -20,10 +20,6 @@ import { PermissionManager } from "../managers/PermissionManager";
 import { ContextCollector } from "../managers/ContextCollector";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
-import {
-  OperationHistoryManager,
-  OperationRecord,
-} from "../managers/OperationHistoryManager";
 import { ErrorHandler } from "../managers/ErrorHandler";
 
 /**
@@ -48,8 +44,6 @@ export type WebviewMessage =
   | { type: "task_complete" }
   | { type: "mode_changed"; mode: WorkMode }
   | { type: "conversation_cleared" }
-  | { type: "operation_recorded"; operation: OperationRecord }
-  | { type: "operation_history"; operations: OperationRecord[] }
   | { type: "conversation_history"; messages: any[] }
   | { type: "conversation_list"; conversations: any[] }
   | { type: "conversation_switched"; conversationId: string }
@@ -103,7 +97,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private contextCollector: ContextCollector;
   private configurationManager: ConfigurationManager;
   private conversationHistoryManager: ConversationHistoryManager;
-  private operationHistoryManager: OperationHistoryManager;
   private errorHandler: ErrorHandler;
   private apiConfiguration: ApiConfiguration = {
     model: "",
@@ -119,16 +112,12 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.permissionManager = new PermissionManager();
     this.permissionManager.setWebviewProvider(this);
 
-    // Initialize operation history manager
-    this.operationHistoryManager = new OperationHistoryManager(context);
-
     // Initialize error handler
     this.errorHandler = new ErrorHandler();
 
     // Initialize tool executor and register default tools
     this.toolExecutor = new ToolExecutor();
     this.toolExecutor.setPermissionManager(this.permissionManager);
-    this.toolExecutor.setOperationHistoryManager(this.operationHistoryManager);
     this.toolExecutor.setErrorHandler(this.errorHandler);
     this.registerDefaultTools();
 
@@ -281,18 +270,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     // Handle clear conversation messages (Requirement 4.5)
     if (message.type === "clear_conversation") {
       this.handleClearConversation();
-      return;
-    }
-
-    // Handle get operation history messages (Requirements: 11.2, 11.3)
-    if (message.type === "get_operation_history") {
-      this.handleGetOperationHistory();
-      return;
-    }
-
-    // Handle clear operation history messages (Requirement 11.5)
-    if (message.type === "clear_operation_history") {
-      this.handleClearOperationHistory();
       return;
     }
 
@@ -468,60 +445,35 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * Handle get operation history request
-   * Requirements: 11.2, 11.3
-   */
-  private handleGetOperationHistory(): void {
-    try {
-      const operations = this.operationHistoryManager.getAllOperations();
-
-      // Send operation history to webview
-      this.postMessageToWebview({
-        type: "operation_history",
-        operations,
-      });
-
-      console.log(
-        `[AgentWebviewProvider] Sent ${operations.length} operations to webview`
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        "[AgentWebviewProvider] Failed to get operation history:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to get operation history: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
    * Handle get conversation history request
    */
   private handleGetConversationHistory(): void {
     try {
       const messages = this.conversationHistoryManager.getMessages();
-      
+
       // Convert HistoryItem[] to DisplayMessage format
       const displayMessages = messages.map((msg: any, index: number) => {
-        let content = '';
-        
+        let content = "";
+
         // Handle different content types
-        if (typeof msg.content === 'string') {
+        if (typeof msg.content === "string") {
           content = msg.content;
         } else if (Array.isArray(msg.content)) {
           // Handle content arrays (e.g., with images or tool results)
           content = msg.content
             .map((part: any) => {
-              if (typeof part === 'string') return part;
-              if (part.type === 'text') return part.text;
-              if (part.type === 'tool_result') return `[Tool Result: ${part.tool_name}]`;
+              if (typeof part === "string") {
+                return part;
+              }
+              if (part.type === "text") {
+                return part.text;
+              }
+              if (part.type === "tool_result") {
+                return `[Tool Result: ${part.tool_name}]`;
+              }
               return JSON.stringify(part);
             })
-            .join('\n');
+            .join("\n");
         } else {
           content = JSON.stringify(msg.content);
         }
@@ -540,7 +492,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         messages: displayMessages,
       });
 
-      console.log(`[AgentWebviewProvider] Sent ${displayMessages.length} messages to webview`);
+      console.log(
+        `[AgentWebviewProvider] Sent ${displayMessages.length} messages to webview`
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -561,7 +515,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private handleNewConversation(): void {
     try {
       this.conversationHistoryManager.clearConversation();
-      
+
       // Send empty conversation history to webview
       this.postMessageToWebview({
         type: "conversation_history",
@@ -572,7 +526,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         type: "conversation_cleared",
       });
 
-      console.log('[AgentWebviewProvider] New conversation started');
+      console.log("[AgentWebviewProvider] New conversation started");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -592,11 +546,13 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    */
   private handleGetConversationList(): void {
     try {
-      const conversations = this.conversationHistoryManager.getConversationHistory();
-      const currentId = this.conversationHistoryManager.getCurrentConversationId();
-      
+      const conversations =
+        this.conversationHistoryManager.getConversationHistory();
+      const currentId =
+        this.conversationHistoryManager.getCurrentConversationId();
+
       // Format conversations for display
-      const formattedConversations = conversations.map(conv => ({
+      const formattedConversations = conversations.map((conv) => ({
         id: conv.id,
         timestamp: conv.timestamp,
         messageCount: conv.messages.length,
@@ -605,8 +561,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       }));
 
       // Sort by timestamp, newest first
-      formattedConversations.sort((a, b) => 
-        new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
+      formattedConversations.sort(
+        (a, b) =>
+          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
       );
 
       this.postMessageToWebview({
@@ -614,7 +571,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         conversations: formattedConversations,
       });
 
-      console.log(`[AgentWebviewProvider] Sent ${formattedConversations.length} conversations to webview`);
+      console.log(
+        `[AgentWebviewProvider] Sent ${formattedConversations.length} conversations to webview`
+      );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -634,18 +593,21 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    */
   private handleSwitchConversation(conversationId: string): void {
     try {
-      const success = this.conversationHistoryManager.restoreConversation(conversationId);
-      
+      const success =
+        this.conversationHistoryManager.restoreConversation(conversationId);
+
       if (success) {
         // Send the conversation messages to webview
         this.handleGetConversationHistory();
-        
+
         this.postMessageToWebview({
           type: "conversation_switched",
           conversationId: conversationId,
         });
 
-        console.log(`[AgentWebviewProvider] Switched to conversation: ${conversationId}`);
+        console.log(
+          `[AgentWebviewProvider] Switched to conversation: ${conversationId}`
+        );
       } else {
         this.postMessageToWebview({
           type: "error",
@@ -670,12 +632,15 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    * Handle delete conversation request
    */
   private handleDeleteConversation(conversationId: string): void {
-    console.log(`[AgentWebviewProvider] Received delete request for: ${conversationId}`);
+    console.log(
+      `[AgentWebviewProvider] Received delete request for: ${conversationId}`
+    );
     try {
-      const success = this.conversationHistoryManager.deleteConversation(conversationId);
-      
+      const success =
+        this.conversationHistoryManager.deleteConversation(conversationId);
+
       console.log(`[AgentWebviewProvider] Delete result: ${success}`);
-      
+
       if (success) {
         this.postMessageToWebview({
           type: "conversation_deleted",
@@ -685,9 +650,13 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         // Refresh conversation list
         this.handleGetConversationList();
 
-        console.log(`[AgentWebviewProvider] Deleted conversation: ${conversationId}`);
+        console.log(
+          `[AgentWebviewProvider] Deleted conversation: ${conversationId}`
+        );
       } else {
-        console.warn(`[AgentWebviewProvider] Failed to delete conversation: ${conversationId}`);
+        console.warn(
+          `[AgentWebviewProvider] Failed to delete conversation: ${conversationId}`
+        );
         this.postMessageToWebview({
           type: "error",
           message: `Failed to delete conversation: ${conversationId}`,
@@ -711,44 +680,15 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    * Get a preview of the conversation (first user message)
    */
   private getConversationPreview(messages: any[]): string {
-    const firstUserMessage = messages.find(msg => msg.role === 'user');
+    const firstUserMessage = messages.find((msg) => msg.role === "user");
     if (firstUserMessage) {
-      const content = typeof firstUserMessage.content === 'string' 
-        ? firstUserMessage.content 
-        : JSON.stringify(firstUserMessage.content);
-      return content.length > 100 ? content.substring(0, 100) + '...' : content;
+      const content =
+        typeof firstUserMessage.content === "string"
+          ? firstUserMessage.content
+          : JSON.stringify(firstUserMessage.content);
+      return content.length > 100 ? content.substring(0, 100) + "..." : content;
     }
-    return 'Empty conversation';
-  }
-
-  /**
-   * Handle clear operation history request
-   * Requirement 11.5
-   */
-  private handleClearOperationHistory(): void {
-    try {
-      this.operationHistoryManager.clearHistory();
-
-      // Send empty operation history to webview
-      this.postMessageToWebview({
-        type: "operation_history",
-        operations: [],
-      });
-
-      vscode.window.showInformationMessage("Operation history cleared");
-      console.log("[AgentWebviewProvider] Operation history cleared");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      console.error(
-        "[AgentWebviewProvider] Failed to clear operation history:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to clear operation history: ${errorMessage}`,
-      });
-    }
+    return "Empty conversation";
   }
 
   /**
@@ -833,14 +773,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    */
   getConversationHistoryManager(): ConversationHistoryManager {
     return this.conversationHistoryManager;
-  }
-
-  /**
-   * Get operation history manager
-   * Requirements: 11.1, 11.2, 11.3, 11.4, 11.5
-   */
-  getOperationHistoryManager(): OperationHistoryManager {
-    return this.operationHistoryManager;
   }
 
   /**

@@ -1,7 +1,6 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
-import { OperationHistoryManager } from '../managers/OperationHistoryManager';
 
 /**
  * WriteFileTool - writes content to a file, creating directories as needed
@@ -31,15 +30,7 @@ export class WriteFileTool extends BaseTool {
     },
   ];
 
-  private operationHistoryManager?: OperationHistoryManager;
 
-  /**
-   * Set operation history manager for recording operations
-   * Requirements: 11.1, 11.2
-   */
-  setOperationHistoryManager(manager: OperationHistoryManager): void {
-    this.operationHistoryManager = manager;
-  }
 
   /**
    * Validate and normalize file path to prevent path traversal attacks
@@ -109,20 +100,6 @@ export class WriteFileTool extends BaseTool {
       // Count lines for feedback
       const lineCount = content.split('\n').length;
       const charCount = content.length;
-      
-      // Record operation in history (Requirements: 11.1, 11.2)
-      if (this.operationHistoryManager) {
-        this.operationHistoryManager.recordOperation({
-          type: 'file_write',
-          target: filePath,
-          toolName: this.name,
-          description: `Wrote ${lineCount} lines to ${filePath}`,
-          details: {
-            linesAdded: lineCount,
-            contentPreview: content.substring(0, 100) + (content.length > 100 ? '...' : ''),
-          },
-        });
-      }
       
       return `Successfully wrote to file: ${filePath}\n${lineCount} lines, ${charCount} characters`;
       
