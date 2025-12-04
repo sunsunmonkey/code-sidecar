@@ -77,11 +77,11 @@ export class Task {
 
   /**
    * Start the task and initiate the ReAct loop
-   * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5, 4.3, 4.4, 12.1, 12.2, 12.3, 12.4, 12.5
    */
   async start() {
     try {
-      // Load conversation history if available (Requirement 4.3)
+      // Load conversation history if available
+      // TODO webview 恢复？？？
       if (this.conversationHistoryManager) {
         const previousMessages =
           this.conversationHistoryManager.getTruncatedMessages();
@@ -91,7 +91,7 @@ export class Task {
         );
       }
 
-      // Collect context before starting (Requirement 8.1)
+      // Collect context before starting
       console.log(`[Task ${this.id}] Collecting project context...`);
       this.context = await this.contextCollector.collectContext();
 
@@ -107,7 +107,7 @@ export class Task {
       };
       this.history.push(userMessage);
 
-      // Save user message to history (Requirement 4.3)
+      // Save user message to history
       if (this.conversationHistoryManager) {
         this.conversationHistoryManager.addMessage(userMessage);
       }
@@ -191,7 +191,7 @@ export class Task {
       };
       this.history.push(assistantHistoryItem);
 
-      // Save assistant message to history (Requirement 4.3)
+      // Save assistant message to history
       if (this.conversationHistoryManager) {
         this.conversationHistoryManager.addMessage(assistantHistoryItem);
       }
@@ -223,13 +223,13 @@ export class Task {
         return;
       }
 
-      // Check if attempt_completion was called (Requirement 6.6)
+      // Check if attempt_completion was called
       const hasCompletion = this.hasAttemptCompletion(toolCalls);
 
-      // Execute tool calls and get results (Requirement 6.2, 6.3)
+      // Execute tool calls and get results
       const toolResults = await this.handleToolCalls(toolCalls);
 
-      // Add tool results to history as user messages (Requirement 6.3, 6.4, 4.3)
+      // Add tool results to history as user messages
       for (const result of toolResults) {
         const resultMessage = this.formatToolResult(result);
         const toolResultHistoryItem: HistoryItem = {
@@ -238,7 +238,7 @@ export class Task {
         };
         this.history.push(toolResultHistoryItem);
 
-        // Save tool result to history (Requirement 4.3)
+        // Save tool result to history
         if (this.conversationHistoryManager) {
           this.conversationHistoryManager.addMessage(toolResultHistoryItem);
         }

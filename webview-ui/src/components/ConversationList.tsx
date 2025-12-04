@@ -25,7 +25,10 @@ export const ConversationList: React.FC<ConversationListProps> = ({
       console.log("ConversationList received message:", message.type);
 
       if (message.type === "conversation_list") {
-        console.log("Updating conversation list:", message.conversations.length);
+        console.log(
+          "Updating conversation list:",
+          message.conversations.length
+        );
         setConversations(message.conversations);
       } else if (message.type === "conversation_deleted") {
         console.log("Conversation deleted:", message.conversationId);
@@ -52,18 +55,11 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     onConversationSwitch?.();
   };
 
-  const handleDeleteConversation = (
-    conversationId: string,
-    e: React.MouseEvent
-  ) => {
-    e.preventDefault();
-    e.stopPropagation();
+  const handleDeleteConversation = (conversationId: string) => {
     console.log("Delete conversation clicked:", conversationId);
-    
-    if (window.confirm("确定要删除这个会话吗？")) {
-      console.log("Sending delete_conversation message:", conversationId);
-      vscode.postMessage({ type: "delete_conversation", conversationId });
-    }
+
+    console.log("Sending delete_conversation message:", conversationId);
+    vscode.postMessage({ type: "delete_conversation", conversationId });
   };
 
   const handleToggleList = () => {
@@ -153,7 +149,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                         {formatDate(conv.timestamp)}
                       </span>
                     </div>
-                    <div className="text-sm mb-1 line-clamp-2">{conv.preview}</div>
+                    <div className="text-sm mb-1 line-clamp-2">
+                      {conv.preview}
+                    </div>
                     <div className="text-xs text-[var(--vscode-descriptionForeground)]">
                       {conv.messageCount} 条消息
                     </div>
@@ -161,15 +159,13 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   <div className="flex items-center pr-2">
                     <button
                       className="bg-transparent text-[var(--vscode-errorForeground)] border-none cursor-pointer text-lg px-2 py-1 rounded hover:bg-[var(--vscode-button-secondaryHoverBackground)]"
-                      onClick={(e) => {
-                        e.preventDefault();
-                        e.stopPropagation();
-                        handleDeleteConversation(conv.id, e);
+                      onClick={() => {
+                        handleDeleteConversation(conv.id);
                       }}
                       title="删除会话"
                       type="button"
                     >
-                      🗑️
+                      ❌
                     </button>
                   </div>
                 </div>

@@ -3,7 +3,6 @@ import { useEffect, useState, useCallback } from "react";
 import { MessageList } from "./components/MessageList";
 import { InputBox } from "./components/InputBox";
 import { ModeSelector } from "./components/ModeSelector";
-import { OperationHistory } from "./components/OperationHistory";
 import { ConversationList } from "./components/ConversationList";
 import { ConfigPanel } from "./components/config/ConfigPanel";
 import type {
@@ -262,13 +261,15 @@ function App() {
   /**
    * Handle conversation history loaded from extension
    */
-  const handleConversationHistoryLoaded = (historyMessages: DisplayMessage[]) => {
+  const handleConversationHistoryLoaded = (
+    historyMessages: DisplayMessage[]
+  ) => {
     // Convert timestamp strings to Date objects
-    const convertedMessages = historyMessages.map(msg => ({
+    const convertedMessages = historyMessages.map((msg) => ({
       ...msg,
       timestamp: new Date(msg.timestamp),
     }));
-    
+
     setMessages(convertedMessages);
     console.log(`Loaded ${convertedMessages.length} messages from history`);
   };
@@ -385,7 +386,6 @@ function App() {
             </button>
           </div>
           <ConversationList vscode={vscode} />
-          <OperationHistory vscode={vscode} />
           <MessageList
             messages={messages}
             onPermissionResponse={handlePermissionResponse}

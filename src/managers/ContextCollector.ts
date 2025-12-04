@@ -56,7 +56,6 @@ export interface ProjectContext {
 
 /**
  * ContextCollector collects project context information
- * Requirements: 8.1, 8.2, 8.3, 8.4, 8.5
  */
 export class ContextCollector {
   private readonly MAX_CONTEXT_SIZE = 100000; // Maximum context size in characters
@@ -65,7 +64,6 @@ export class ContextCollector {
 
   /**
    * Collect current project context
-   * Requirements: 8.1, 8.2, 8.3, 8.4
    */
   async collectContext(): Promise<ProjectContext> {
     const context: ProjectContext = {};
@@ -88,7 +86,11 @@ export class ContextCollector {
           // File too large, truncate with message
           context.activeFile = {
             path: this.getRelativePath(document.uri.fsPath),
-            content: `[File too large (${content.length} chars). Showing first ${this.MAX_FILE_SIZE} chars]\n${content.substring(0, this.MAX_FILE_SIZE)}`,
+            content: `[File too large (${
+              content.length
+            } chars). Showing first ${
+              this.MAX_FILE_SIZE
+            } chars]\n${content.substring(0, this.MAX_FILE_SIZE)}`,
             language: document.languageId,
           };
         }
@@ -145,7 +147,11 @@ export class ContextCollector {
 
       // Apply size limit (Requirement 8.3)
       if (content.length > this.MAX_FILE_SIZE) {
-        return `[File: ${filePath}]\n[File too large (${content.length} chars). Showing first ${this.MAX_FILE_SIZE} chars]\n${content.substring(0, this.MAX_FILE_SIZE)}`;
+        return `[File: ${filePath}]\n[File too large (${
+          content.length
+        } chars). Showing first ${
+          this.MAX_FILE_SIZE
+        } chars]\n${content.substring(0, this.MAX_FILE_SIZE)}`;
       }
 
       return `[File: ${filePath}]\n${content}`;
@@ -384,7 +390,9 @@ export class ContextCollector {
       for (const diag of context.diagnostics.slice(0, 20)) {
         // Limit to 20
         parts.push(
-          `- [${diag.severity.toUpperCase()}] ${diag.file}:${diag.line}:${diag.column} - ${diag.message}`
+          `- [${diag.severity.toUpperCase()}] ${diag.file}:${diag.line}:${
+            diag.column
+          } - ${diag.message}`
         );
       }
       if (context.diagnostics.length > 20) {
@@ -430,9 +438,7 @@ export class ContextCollector {
       if (node.type === "directory") {
         lines.push(`${indent}📁 ${node.name}/`);
         if (node.children && node.children.length > 0) {
-          lines.push(
-            this.formatFileTree(node.children, depth + 1, maxDepth)
-          );
+          lines.push(this.formatFileTree(node.children, depth + 1, maxDepth));
         }
       } else {
         lines.push(`${indent}📄 ${node.name}`);
