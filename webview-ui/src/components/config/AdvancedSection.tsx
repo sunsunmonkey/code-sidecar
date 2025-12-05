@@ -39,18 +39,18 @@ export const AdvancedSection: React.FC<AdvancedSectionProps> = ({
   };
 
   return (
-    <section className="p-4 mb-4 border border-[var(--vscode-panel-border)] rounded bg-[var(--vscode-editor-background)] transition-all">
-      <h2 className="text-base font-semibold text-[var(--vscode-foreground)] m-0 mb-4 pb-2 border-b border-[var(--vscode-panel-border)]">
+    <section className="p-4 mb-4 border border-(--vscode-panel-border) rounded bg-(--vscode-editor-background) transition-all">
+      <h2 className="text-base font-semibold text-(--vscode-foreground) m-0 mb-4 pb-2 border-b border-(--vscode-panel-border)">
         Advanced Settings
       </h2>
       <div className="flex flex-col gap-1.5 mb-4">
-        <label className="text-[13px] font-medium text-[var(--vscode-foreground)] select-none">
+        <label className="text-[13px] font-medium text-(--vscode-foreground) select-none">
           Default Mode
         </label>
         <select
           value={advanced.defaultMode}
           onChange={(e) => handleModeChange(e.target.value)}
-          className="w-full px-2 py-1.5 text-[13px] text-[var(--vscode-input-foreground)] bg-[var(--vscode-input-background)] border border-[var(--vscode-input-border,var(--vscode-panel-border))] rounded-sm outline-none cursor-pointer transition-all hover:border-[var(--vscode-inputOption-activeBorder,var(--vscode-focusBorder))] focus:border-[var(--vscode-focusBorder)]"
+          className="w-full px-2 py-1.5 text-[13px] text-(--vscode-input-foreground) bg-(--vscode-input-background) border border-(--vscode-input-border,var(--vscode-panel-border)) rounded-sm outline-none cursor-pointer transition-all hover:border-(--vscode-inputOption-activeBorder,var(--vscode-focusBorder)) focus:border-(--vscode-focusBorder)"
         >
           <option value="architect">Architect</option>
           <option value="code">Code</option>

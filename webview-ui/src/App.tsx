@@ -1,4 +1,3 @@
-/* eslint-disable react-hooks/immutability */
 import { useEffect, useState, useCallback } from "react";
 import { MessageList } from "./components/MessageList";
 import { InputBox } from "./components/InputBox";
@@ -13,6 +12,7 @@ import type {
   WorkMode,
 } from "./types/messages";
 import { vscode } from "./utils/vscode";
+import { useEvent } from "react-use";
 
 type Tab = "chat" | "config";
 
@@ -29,7 +29,6 @@ function App() {
   const [currentMode, setCurrentMode] = useState<WorkMode>("code");
   /**
    * Handle messages from the extension
-   * Requirements: 4.1, 4.2, 14.1, 14.2, 4.5
    */
   const handleExtensionMessage = useCallback((event: MessageEvent) => {
     const message: WebviewMessage = event.data;
@@ -85,6 +84,7 @@ function App() {
         handlePermissionRequest(message.request);
         break;
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleStreamChunk = (content: string, isStreaming: boolean) => {
@@ -321,16 +321,7 @@ function App() {
   /**
    * Set up message listener and load conversation history
    */
-  useEffect(() => {
-    window.addEventListener("message", handleExtensionMessage);
-
-    // Request conversation history when component mounts
-    vscode.postMessage({ type: "get_conversation_history" });
-
-    return () => {
-      window.removeEventListener("message", handleExtensionMessage);
-    };
-  }, [handleExtensionMessage]);
+  useEvent("message", handleExtensionMessage);
 
   /**
    * Update messages when current assistant message changes
@@ -360,13 +351,13 @@ function App() {
     <>
       <div style={{ display: tab === "chat" ? "block" : "none" }}>
         <div className="flex flex-col h-screen w-full">
-          <div className="flex items-center justify-between gap-2 p-3 bg-[var(--vscode-sideBar-background)] border-b border-[var(--vscode-panel-border)] flex-shrink-0">
+          <div className="flex items-center justify-between gap-2 p-3 bg-(--vscode-sideBar-background) border-b border-(--vscode-panel-border) shrink-0">
             <ModeSelector
               currentMode={currentMode}
               onModeChange={handleModeChange}
             />
             <button
-              className="bg-transparent border border-[var(--vscode-button-border,transparent)] text-[var(--vscode-button-foreground)] px-2 py-1 cursor-pointer rounded-sm text-base transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"
+              className="bg-transparent border border-(--vscode-button-border,transparent) text-(--vscode-button-foreground) px-2 py-1 cursor-pointer rounded-sm text-base transition-colors hover:bg-(--vscode-button-hoverBackground)"
               onClick={() => setTab("config")}
               title="Open Configuration"
             >
@@ -388,9 +379,9 @@ function App() {
 
       <div style={{ display: tab === "config" ? "block" : "none" }}>
         <div className="flex flex-col h-screen w-full">
-          <div className="flex items-center gap-3 p-3 bg-[var(--vscode-sideBar-background)] border-b border-[var(--vscode-panel-border)] flex-shrink-0">
+          <div className="flex items-center gap-3 p-3 bg-(--vscode-sideBar-background) border-b border-(--vscode-panel-border) shrink-0">
             <button
-              className="bg-transparent border border-[var(--vscode-button-border,transparent)] text-[var(--vscode-button-foreground)] px-3 py-1 cursor-pointer rounded-sm text-sm transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"
+              className="bg-transparent border border-(--vscode-button-border,transparent) text-(--vscode-button-foreground) px-3 py-1 cursor-pointer rounded-sm text-sm transition-colors hover:bg-(--vscode-button-hoverBackground)"
               onClick={() => setTab("chat")}
               title="Back to Chat"
             >

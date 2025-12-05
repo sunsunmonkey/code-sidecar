@@ -1,7 +1,6 @@
 /**
  * ConfigPanel component
  * Main configuration panel that combines all configuration sections
- * Requirements: 1.1, 2.1
  */
 
 import React from 'react';
@@ -37,8 +36,8 @@ export const ConfigPanel: React.FC = () => {
   // Show loading state while configuration is being loaded
   if (isLoading || !config) {
     return (
-      <div className="flex flex-col h-full w-full overflow-y-auto bg-[var(--vscode-sideBar-background)]">
-        <div className="flex items-center justify-center h-full text-sm text-[var(--vscode-foreground)] opacity-70">
+      <div className="flex flex-col h-full w-full overflow-y-auto bg-(--vscode-sideBar-background)">
+        <div className="flex items-center justify-center h-full text-sm text-(--vscode-foreground) opacity-70">
           Loading configuration...
         </div>
       </div>
@@ -72,12 +71,12 @@ export const ConfigPanel: React.FC = () => {
   };
 
   return (
-    <div className="flex flex-col h-full w-full overflow-y-auto bg-[var(--vscode-sideBar-background)] [&_*:focus-visible]:outline-1 [&_*:focus-visible]:outline-offset-2 [&_*:focus-visible]:outline-[var(--vscode-focusBorder)]">
-      <header className="p-5 md:px-6 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-editor-background)] flex-shrink-0">
-        <h1 className="text-xl font-semibold text-[var(--vscode-foreground)] m-0 mb-2">
+    <div className="flex flex-col h-full w-full overflow-y-auto bg-(--vscode-sideBar-background) [&_*:focus-visible]:outline-1 [&_*:focus-visible]:outline-offset-2 [&_*:focus-visible]:outline-[var(--vscode-focusBorder)]">
+      <header className="p-5 md:px-6 border-b border-(--vscode-panel-border) bg-(--vscode-editor-background) shrink-0">
+        <h1 className="text-xl font-semibold text-(--vscode-foreground) m-0 mb-2">
           Configuration
         </h1>
-        <p className="text-[13px] text-[var(--vscode-descriptionForeground)] m-0 leading-normal">
+        <p className="text-[13px] text-(--vscode-descriptionForeground) m-0 leading-normal">
           {isFirstTime 
             ? '👋 Welcome! Let\'s set up your AI Coding Assistant to get started.'
             : 'Configure your AI Coding Assistant settings'
@@ -86,7 +85,7 @@ export const ConfigPanel: React.FC = () => {
       </header>
 
       {isFirstTime && (
-        <div className="m-0 mb-6 p-5 bg-[var(--vscode-textBlockQuote-background)] border-l-4 border-l-[var(--vscode-textLink-foreground)] rounded">
+        <div className="m-0 mb-6 p-5 bg-(--vscode-textBlockQuote-background) border-l-4 border-l-[var(--vscode-textLink-foreground)] rounded">
           <div>
             <h2 className="text-base font-semibold text-[var(--vscode-foreground)] m-0 mb-3">
               🚀 Quick Setup

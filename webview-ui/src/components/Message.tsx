@@ -271,10 +271,10 @@ export const Message: React.FC<MessageProps> = ({
         </div>
       )}
 
-      <div className="text-[var(--vscode-foreground)]">
+      <div className="text-(--vscode-foreground)">
         {content && (
           <div
-            className={`leading-relaxed [&_p]:m-0 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_code]:bg-[var(--vscode-textCodeBlock-background)] [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[0.9em] [&_pre]:my-2 [&_pre]:rounded [&_pre]:overflow-x-auto`}
+            className={`leading-relaxed [&_p]:m-0 [&_p]:mb-2 [&_p:last-child]:mb-0 [&_code]:bg-(--vscode-textCodeBlock-background) [&_code]:px-1 [&_code]:py-0.5 [&_code]:rounded [&_code]:text-[0.9em] [&_pre]:my-2 [&_pre]:rounded [&_pre]:overflow-x-auto`}
           >
             <ReactMarkdown
               components={{
