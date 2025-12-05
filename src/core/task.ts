@@ -5,6 +5,7 @@ import { PromptBuilder } from "../managers/PromptBuilder";
 import { XMLParser } from "fast-xml-parser";
 import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
+import { ConversationHistoryManager } from "../managers";
 
 /**
  * Text content in assistant message
@@ -49,10 +50,10 @@ export class Task {
   private readonly MAX_LOOPS: number = 5;
   private readonly id: string;
   private toolExecutor: ToolExecutor;
-  private promptBuilder?: PromptBuilder;
+  private promptBuilder: PromptBuilder;
   private contextCollector: ContextCollector;
   private context?: ProjectContext;
-  private conversationHistoryManager?: any; // ConversationHistoryManager
+  private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
 
   constructor(
@@ -60,19 +61,19 @@ export class Task {
     private apiConfiguration: ApiConfiguration,
     private message: string,
     toolExecutor: ToolExecutor,
-    promptBuilder?: PromptBuilder,
-    contextCollector?: ContextCollector,
-    conversationHistoryManager?: any,
-    errorHandler?: ErrorHandler
+    promptBuilder: PromptBuilder,
+    contextCollector: ContextCollector,
+    conversationHistoryManager: ConversationHistoryManager,
+    errorHandler: ErrorHandler
   ) {
     this.id = `task-${Date.now()}-${Math.random()
       .toString(36)
       .substring(2, 11)}`;
     this.toolExecutor = toolExecutor;
     this.promptBuilder = promptBuilder;
-    this.contextCollector = contextCollector || new ContextCollector();
+    this.contextCollector = contextCollector;
     this.conversationHistoryManager = conversationHistoryManager;
-    this.errorHandler = errorHandler || new ErrorHandler();
+    this.errorHandler = errorHandler;
   }
 
   /**
@@ -80,22 +81,11 @@ export class Task {
    */
   async start() {
     try {
-      // Load conversation history if available
-      // TODO webview 恢复？？？
-      if (this.conversationHistoryManager) {
-        const previousMessages =
-          this.conversationHistoryManager.getTruncatedMessages();
-        this.history = [...previousMessages];
-        console.log(
-          `[Task ${this.id}] Loaded ${previousMessages.length} messages from history`
-        );
-      }
-
       // Collect context before starting
       console.log(`[Task ${this.id}] Collecting project context...`);
       this.context = await this.contextCollector.collectContext();
 
-      // Format user message with context (Requirement 8.1, 8.4)
+      // Format user message with context
       const messageWithContext = this.formatUserMessageWithContext(
         this.message,
         this.context
@@ -105,16 +95,18 @@ export class Task {
         role: "user",
         content: messageWithContext,
       };
+
       this.history.push(userMessage);
 
       // Save user message to history
+      // TODO 这块的 history 和 展示的
       if (this.conversationHistoryManager) {
         this.conversationHistoryManager.addMessage(userMessage);
       }
 
       await this.recursivelyMakeRequest(this.history);
     } catch (error) {
-      // Handle errors at the top level (Requirements 12.1, 12.2, 12.3, 12.4, 12.5)
+      // Handle errors at the top level
       this.handleTaskError(error, "task_start");
     }
   }
@@ -129,27 +121,27 @@ export class Task {
   ): string {
     const parts: string[] = [];
 
-    // Add user message first
-    parts.push("# User Request");
-    parts.push(message);
-
     // Add context information
+    // TODO 这块是不是提到 system prompt 合适一点，看看 cline 怎么做的
     const contextStr = this.contextCollector.formatContext(context);
     if (contextStr) {
       parts.push("\n# Project Context");
       parts.push(contextStr);
     }
 
+    // Add user message first
+    parts.push("# User Request");
+    parts.push(message);
+
     return parts.join("\n");
   }
 
   /**
    * Recursively execute the ReAct loop
-   * Requirements: 6.1, 6.2, 6.3, 6.4, 6.5, 6.6, 6.7, 12.1, 12.2, 12.3, 12.4, 12.5
    */
   private async recursivelyMakeRequest(history: HistoryItem[]) {
     try {
-      // Check loop count limit (Requirement 6.7)
+      // Check loop count limit
       if (!this.shouldContinueLoop()) {
         this.provider.postMessageToWebview({
           type: "error",
@@ -163,7 +155,7 @@ export class Task {
 
       const apiHandler = new ApiHandler(this.apiConfiguration);
       const systemPrompt = await this.getSystemPrompt();
-      // Stream LLM response (Requirement 6.1)
+      // Stream LLM response
       const stream = apiHandler.createMessage(systemPrompt, history);
 
       let assistantMessage = "";
@@ -175,11 +167,14 @@ export class Task {
           isStreaming: true,
         });
       }
+
+      // completely stream
       this.provider.postMessageToWebview({
         type: "stream_chunk",
         content: "",
         isStreaming: false,
       });
+
       console.log(
         `[Task ${this.id}] Loop ${this.loopCount}: Assistant response received`
       );
@@ -189,6 +184,7 @@ export class Task {
         role: "assistant",
         content: assistantMessage,
       };
+
       this.history.push(assistantHistoryItem);
 
       // Save assistant message to history
@@ -196,7 +192,7 @@ export class Task {
         this.conversationHistoryManager.addMessage(assistantHistoryItem);
       }
 
-      // Parse assistant message for tool calls (Requirement 6.1, 6.2)
+      // Parse assistant message for tool calls
       const assistantContent = this.parseAssistantMessage(assistantMessage);
       const toolCalls = assistantContent.filter(
         (content): content is ToolUse => content.type === "tool_use"
@@ -249,7 +245,7 @@ export class Task {
         });
       }
 
-      // If attempt_completion was called, end the ReAct loop (Requirement 6.6)
+      // If attempt_completion was called, end the ReAct loop
       if (hasCompletion) {
         console.log(
           `[Task ${this.id}] Task completion requested, ending ReAct loop`
@@ -258,10 +254,10 @@ export class Task {
         return;
       }
 
-      // Continue the ReAct loop (Requirement 6.4, 6.5)
+      // Continue the ReAct loop
       await this.recursivelyMakeRequest(this.history);
     } catch (error) {
-      // Handle errors in ReAct loop (Requirements 12.1, 12.2, 12.3, 12.4, 12.5)
+      // Handle errors in ReAct loop
       await this.handleTaskError(error, `react_loop_${this.loopCount}`);
     }
   }
@@ -269,7 +265,6 @@ export class Task {
   /**
    * Parse assistant message to extract text and tool calls
    * Supports multiple tool calls in a single message
-   * Requirements: 6.1, 6.2
    */
   private parseAssistantMessage(
     assistantMessage: string
@@ -301,6 +296,7 @@ export class Task {
       // If we found tool calls, also extract any text content
       if (contents.length > 0) {
         // Extract text that's not part of XML tags
+        // TODO 这块正则看起来有点问题
         const textContent = assistantMessage
           .replace(/<[^>]+>.*?<\/[^>]+>/gs, "")
           .trim();
@@ -332,7 +328,6 @@ export class Task {
 
   /**
    * Handle multiple tool calls
-   * Requirements: 6.2, 6.3, 6.6, 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7
    */
   private async handleToolCalls(toolCalls: ToolUse[]): Promise<ToolResult[]> {
     const results: ToolResult[] = [];
@@ -345,7 +340,7 @@ export class Task {
         toolCall: toolCall,
       });
 
-      // Execute tool using ToolExecutor (Requirements 13.1-13.7)
+      // Execute tool using ToolExecutor
       const result = await this.toolExecutor.executeTool(toolCall);
 
       results.push(result);
@@ -356,7 +351,6 @@ export class Task {
 
   /**
    * Check if any tool call is attempt_completion
-   * Requirement 6.6
    */
   private hasAttemptCompletion(toolCalls: ToolUse[]): boolean {
     return toolCalls.some((toolCall) => toolCall.name === "attempt_completion");
@@ -364,7 +358,6 @@ export class Task {
 
   /**
    * Format tool result for adding to conversation history
-   * Requirement 6.3
    */
   private formatToolResult(result: ToolResult): string {
     if (result.is_error) {
@@ -375,7 +368,6 @@ export class Task {
 
   /**
    * Check if the loop should continue
-   * Requirement 6.7
    */
   private shouldContinueLoop(): boolean {
     return this.loopCount < this.MAX_LOOPS;
@@ -383,33 +375,15 @@ export class Task {
 
   /**
    * Get system prompt - uses PromptBuilder if available, otherwise falls back to file
-   * Requirements: 6.1, 7.1, 13.1, 13.2
    */
   private async getSystemPrompt(): Promise<string> {
+    // TODO 这块缓存真的有用？？？
     if (this.systemPrompt) {
       return this.systemPrompt;
     }
 
     // Use PromptBuilder if available (dynamic prompt generation)
-    if (this.promptBuilder) {
-      this.systemPrompt = this.promptBuilder.buildSystemPrompt();
-      return this.systemPrompt;
-    }
-
-    // Fallback: use static prompt file (for backward compatibility)
-    // This will be removed once PromptBuilder is fully integrated
-    const fs = await import("fs/promises");
-    const path = await import("path");
-    this.systemPrompt = await fs.readFile(
-      path.join(
-        this.provider.context.extensionPath,
-        "assets",
-        "systemPrompt.md"
-      ),
-      {
-        encoding: "utf-8",
-      }
-    );
+    this.systemPrompt = this.promptBuilder.buildSystemPrompt();
     return this.systemPrompt;
   }
 
@@ -457,7 +431,6 @@ export class Task {
 
   /**
    * Handle task errors with error handler
-   * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
    */
   private async handleTaskError(
     error: unknown,

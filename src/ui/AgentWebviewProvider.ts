@@ -251,7 +251,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
   /**
    * Handle messages from webview
-   * Requirements: 7.5, 7.6, 8.1, 8.2, 8.3, 8.4, 8.5, 10.5, 4.5, 11.2, 11.3, 11.5
    */
   private async handleMessage(message: any): Promise<void> {
     // Handle mode change messages
@@ -336,7 +335,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    // Check if API is configured before starting task (Requirement 10.5)
+    // Check if API is configured before starting task
     const isConfigured =
       await this.configurationManager.promptConfigureApiIfNeeded();
     if (!isConfigured) {
@@ -349,20 +348,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     }
 
     // Handle user messages
-    if (typeof message === "string") {
-      vscode.window.showInformationMessage(message);
-      this.currentTask = new Task(
-        this,
-        this.apiConfiguration,
-        message,
-        this.toolExecutor,
-        this.promptBuilder,
-        this.contextCollector,
-        this.conversationHistoryManager,
-        this.errorHandler
-      );
-      await this.currentTask.start();
-    } else if (message.type === "user_message") {
+    if (message.type === "user_message") {
       this.currentTask = new Task(
         this,
         this.apiConfiguration,
@@ -379,7 +365,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
   /**
    * Handle mode change request
-   * Requirements: 7.5, 7.6
    */
   private handleModeChange(mode: WorkMode): void {
     try {
@@ -411,7 +396,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
   /**
    * Handle clear conversation request
-   * Requirement 4.5: Support clearing conversation
    */
   private handleClearConversation(): void {
     try {

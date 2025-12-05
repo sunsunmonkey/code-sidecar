@@ -69,7 +69,7 @@ export class ContextCollector {
     const context: ProjectContext = {};
 
     try {
-      // Collect active file and selection (Requirement 8.1)
+      // Collect active file and selection
       const editor = vscode.window.activeTextEditor;
       if (editor) {
         const document = editor.document;
@@ -95,7 +95,7 @@ export class ContextCollector {
           };
         }
 
-        // Collect selection (Requirement 8.1)
+        // Collect selection
         const selection = editor.selection;
         if (!selection.isEmpty) {
           const selectedText = document.getText(selection);
@@ -106,17 +106,17 @@ export class ContextCollector {
           };
         }
 
-        // Collect cursor position (Requirement 8.1)
+        // Collect cursor position
         context.cursorPosition = {
           line: selection.active.line + 1, // 1-indexed
           character: selection.active.character + 1,
         };
       }
 
-      // Collect diagnostics (Requirement 8.1)
+      // Collect diagnostics
       context.diagnostics = await this.collectDiagnostics();
 
-      // Collect project file tree (Requirement 8.1)
+      // Collect project file tree
       context.fileTree = await this.collectFileTree();
     } catch (error) {
       console.error("[ContextCollector] Error collecting context:", error);

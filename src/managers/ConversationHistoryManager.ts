@@ -100,32 +100,6 @@ export class ConversationHistoryManager {
   }
 
   /**
-   * Get truncated messages based on token limit
-   * Requirement 4.4: Intelligently truncate or summarize early conversation
-   */
-  getTruncatedMessages(): HistoryItem[] {
-    const messages = this.getMessages();
-
-    if (messages.length === 0) {
-      return [];
-    }
-
-    // Calculate total estimated tokens
-    const totalTokens = this.estimateTokens(messages);
-
-    if (totalTokens <= this.config.maxTokens) {
-      return messages;
-    }
-
-    console.log(
-      `[ConversationHistoryManager] Truncating history: ${totalTokens} tokens > ${this.config.maxTokens} limit`
-    );
-
-    // Truncate from the beginning, keeping recent messages
-    return this.truncateMessages(messages);
-  }
-
-  /**
    * Clear current conversation
    * Requirement 4.5: Support clearing conversation
    */

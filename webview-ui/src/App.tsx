@@ -33,7 +33,6 @@ function App() {
    */
   const handleExtensionMessage = useCallback((event: MessageEvent) => {
     const message: WebviewMessage = event.data;
-    console.log("=====all=====", message);
     switch (message.type) {
       case "stream_chunk":
         handleStreamChunk(message.content, message.isStreaming);
@@ -57,14 +56,12 @@ function App() {
 
       case "mode_changed":
         // Update current mode when extension confirms the change
-        // Requirement 7.6: Display current mode
         setCurrentMode(message.mode);
         console.log("Mode changed to:", message.mode);
         break;
 
       case "conversation_cleared":
         // Handle conversation cleared confirmation from extension
-        // Requirement 4.5: Support clearing conversation
         handleConversationCleared();
         break;
 
@@ -116,7 +113,6 @@ function App() {
 
   /**
    * Handle tool call from assistant
-   * Requirements: 14.1, 14.2
    */
   const handleToolCall = (toolCall: ToolUse) => {
     // Finalize current assistant message if it has content (reasoning)
@@ -142,7 +138,6 @@ function App() {
 
   /**
    * Handle tool result
-   * Requirements: 14.1, 14.3
    */
   const handleToolResult = (result: ToolResult) => {
     // Find the last tool call message and add the result to it
@@ -179,7 +174,6 @@ function App() {
 
   /**
    * Handle error messages
-   * Requirement 12.1: Display friendly error messages
    */
   const handleError = (errorMessage: string) => {
     const errorMsg: DisplayMessage = {
@@ -196,7 +190,6 @@ function App() {
 
   /**
    * Handle task completion
-   * Requirement 6.6: End ReAct loop when task is complete
    */
   const handleTaskComplete = () => {
     // Finalize current assistant message if exists
@@ -213,7 +206,6 @@ function App() {
 
   /**
    * Send user message to extension
-   * Requirement 4.1: Support user input
    */
   const sendMessage = (content: string) => {
     if (!content.trim()) return;
@@ -238,7 +230,6 @@ function App() {
 
   /**
    * Clear conversation (same as new conversation)
-   * Requirement 4.5: Support clearing conversation
    */
   const clearConversation = () => {
     // Send new conversation message to extension
@@ -249,7 +240,6 @@ function App() {
 
   /**
    * Handle conversation cleared confirmation from extension
-   * Requirement 4.5: Support clearing conversation
    */
   const handleConversationCleared = () => {
     setMessages([]);
@@ -276,7 +266,6 @@ function App() {
 
   /**
    * Handle mode change
-   * Requirements: 7.5, 7.6
    */
   const handleModeChange = (mode: WorkMode) => {
     // Send mode change message to extension
@@ -345,7 +334,6 @@ function App() {
 
   /**
    * Update messages when current assistant message changes
-   * Requirement 4.2: Keep interface updated with streaming content
    */
   useEffect(() => {
     if (currentAssistantMessage) {
