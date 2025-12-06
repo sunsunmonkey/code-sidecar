@@ -18,7 +18,6 @@ type Tab = "chat" | "config";
 
 /**
  * Main App component for the AI Coding Assistant webview
- * Requirements: 4.1, 4.2, 4.3, 9.3, 14.1, 14.2
  */
 function App() {
   const [tab, setTab] = useState<Tab>("chat");

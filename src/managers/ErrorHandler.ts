@@ -208,7 +208,6 @@ export class ErrorHandler {
 
   /**
    * Handle API errors
-   * Requirement 12.1
    */
   private handleApiError(message: string, context: ErrorContext): ErrorResponse {
     if (message.includes('authentication') || message.includes('unauthorized')) {

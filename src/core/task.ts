@@ -164,7 +164,7 @@ export class Task {
       const systemPrompt = await this.getSystemPrompt();
 
       history = history.map((item) => {
-        if (item.role === "role_result") {
+        if (item.role === "tool_result") {
           const content = this.formatToolResult(item.content as ToolResult);
           return {
             role: "user",
