@@ -61,6 +61,18 @@ export class ConversationHistoryManager {
   }
 
   /**
+   * Add multiple messages to the current conversation
+   */
+  updateMessages(messages: HistoryItem[]): void {
+    if (!this.currentConversation) {
+      this.startNewConversation();
+    }
+
+    this.currentConversation!.messages = messages;
+    this.saveCurrentConversation();
+  }
+
+  /**
    * Get current conversation messages
    */
   getMessages(): HistoryItem[] {

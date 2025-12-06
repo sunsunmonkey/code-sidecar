@@ -1,5 +1,5 @@
 import { OpenAI } from "openai";
-import { ToolResult } from "./task";
+import { ToolResult, ToolUse } from "./task";
 
 /**
  * API configuration for LLM service
@@ -15,9 +15,12 @@ export type ApiConfiguration = {
 /**
  * Message history item
  */
+// TODO 收口这些消息
 export type HistoryItem = {
   role: string;
   content: string | ToolResult;
+  toolCalls?: ToolUse[];
+  toolResults?: ToolResult[];
 };
 
 export type OpenAIHistoryItem =

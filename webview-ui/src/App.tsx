@@ -259,6 +259,7 @@ function App() {
       ...msg,
       timestamp: new Date(msg.timestamp),
     }));
+
     console.log(convertedMessages);
     setMessages(convertedMessages);
   };

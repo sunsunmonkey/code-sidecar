@@ -209,11 +209,6 @@ export class Task {
       };
 
       this.history.push(assistantHistoryItem);
-      console.log("🚀 ~ Task ~ recursivelyMakeRequest ~ assistantHistoryItem:", assistantHistoryItem)
-      console.log(
-        "🚀 ~ Task ~ recursivelyMakeRequest ~ assistantHistoryItem:",
-        assistantHistoryItem
-      );
 
       // Save assistant message to history
       if (this.conversationHistoryManager) {
@@ -265,13 +260,19 @@ export class Task {
           content: result,
         });
 
-        // Save tool result to history
-        if (this.conversationHistoryManager) {
-          this.conversationHistoryManager.addMessage({
-            role: "tool_result",
-            content: result,
-          });
-        }
+        // TODO 优化！！！
+        const messages = this.conversationHistoryManager.getMessages();
+        const lastToolCallIndex = messages.findIndex(
+          (msg) =>
+            msg.toolCalls &&
+            msg.toolCalls.some((tc) => tc.name === result.tool_name) &&
+            !msg.toolResults
+        );
+        messages[lastToolCallIndex] = {
+          ...messages[lastToolCallIndex],
+          toolResults: [result],
+        };
+        this.conversationHistoryManager.updateMessages(messages);
       }
 
       // If attempt_completion was called, end the ReAct loop
@@ -367,6 +368,12 @@ export class Task {
       this.provider.postMessageToWebview({
         type: "tool_call",
         toolCall: toolCall,
+      });
+
+      this.conversationHistoryManager.addMessage({
+        role: "system",
+        content: "",
+        toolCalls: [toolCall],
       });
 
       // Execute tool using ToolExecutor

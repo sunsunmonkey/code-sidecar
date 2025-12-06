@@ -430,19 +430,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       // Convert HistoryItem[] to DisplayMessage format
       const displayMessages = messages.map(
         (msg: HistoryItem, index: number) => {
-          if (msg.role === "tool_result") {
-            return {
-              id: `result-${Date.now()}-${index}`,
-              role: "system",
-              content: "",
-              toolResults: [msg.content],
-              timestamp: new Date(),
-            };
-          }
           return {
+            ...msg,
             id: `msg-${Date.now()}-${index}`,
-            role: msg.role,
-            content: msg.content,
             timestamp: new Date(),
           };
         }
