@@ -29,29 +29,7 @@ export interface UIConfiguration {
   };
 }
 
-/**
- * Exported Configuration interface
- * Represents the configuration structure for export (excludes sensitive information like API keys)
- */
-export interface ExportedConfiguration {
-  version: string;
-  api: {
-    baseUrl: string;
-    model: string;
-    temperature: number;
-    maxTokens: number;
-  };
-  permissions: {
-    allowReadByDefault: boolean;
-    allowWriteByDefault: boolean;
-    allowExecuteByDefault: boolean;
-  };
-  advanced: {
-    defaultMode: WorkMode;
-    maxLoopCount: number;
-    contextWindowSize: number;
-  };
-}
+
 
 /**
  * Validation Errors interface

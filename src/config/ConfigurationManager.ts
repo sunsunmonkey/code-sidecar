@@ -5,18 +5,15 @@ import { WorkMode } from "../managers/ModeManager";
 
 /**
  * Complete plugin configuration
- * Requirements: 10.1, 10.2, 10.3, 10.4, 10.5
  */
 export interface PluginConfiguration {
   /**
    * API configuration
-   * Requirements: 10.1, 10.2
    */
   api: ApiConfiguration;
 
   /**
    * Permission settings
-   * Requirement: 10.3
    */
   permissions: PermissionSettings;
 
@@ -38,7 +35,6 @@ export interface PluginConfiguration {
 
 /**
  * UI-friendly configuration format
- * Requirement: 2.1
  */
 export interface UIConfiguration {
   api: {
@@ -60,29 +56,7 @@ export interface UIConfiguration {
   };
 }
 
-/**
- * Exported configuration format (excludes sensitive data)
- * Requirements: 5.1, 5.3
- */
-export interface ExportedConfiguration {
-  version: string;
-  api: {
-    baseUrl: string;
-    model: string;
-    temperature: number;
-    maxTokens: number;
-  };
-  permissions: {
-    allowReadByDefault: boolean;
-    allowWriteByDefault: boolean;
-    allowExecuteByDefault: boolean;
-  };
-  advanced: {
-    defaultMode: WorkMode;
-    maxLoopCount: number;
-    contextWindowSize: number;
-  };
-}
+
 
 /**
  * ConfigurationManager handles reading, saving, and validating plugin configuration
@@ -91,54 +65,16 @@ export class ConfigurationManager {
   private static readonly CONFIG_SECTION = "codingAgent";
   private static readonly API_KEY_SECRET = "codingAgent.apiKey";
 
-  // Cache for configuration to reduce redundant reads
-  private configCache: PluginConfiguration | null = null;
-  private cacheTimestamp: number = 0;
-  private readonly CACHE_TTL = 5000; // 5 seconds cache TTL
+  constructor(private context: vscode.ExtensionContext) {}
 
-  constructor(private context: vscode.ExtensionContext) {
-    // Invalidate cache when configuration changes
-    vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration(ConfigurationManager.CONFIG_SECTION)) {
-        this.invalidateCache();
-      }
-    });
-  }
 
-  /**
-   * Invalidate the configuration cache
-   * Forces next getConfiguration call to read from storage
-   */
-  private invalidateCache(): void {
-    this.configCache = null;
-    this.cacheTimestamp = 0;
-  }
-
-  /**
-   * Check if cache is valid
-   */
-  private isCacheValid(): boolean {
-    if (!this.configCache) {
-      return false;
-    }
-    const now = Date.now();
-    return now - this.cacheTimestamp < this.CACHE_TTL;
-  }
 
   /**
    * Get complete plugin configuration
    *
-   * @param forceRefresh - Force refresh from storage, bypassing cache
    * @returns Promise<PluginConfiguration> Complete configuration
    */
-  async getConfiguration(
-    forceRefresh: boolean = false
-  ): Promise<PluginConfiguration> {
-    // Return cached configuration if valid and not forcing refresh
-    if (!forceRefresh && this.isCacheValid()) {
-      return this.configCache!;
-    }
-
+  async getConfiguration(): Promise<PluginConfiguration> {
     const config = vscode.workspace.getConfiguration(
       ConfigurationManager.CONFIG_SECTION
     );
@@ -176,10 +112,6 @@ export class ConfigurationManager {
       maxLoopCount: config.get<number>("maxLoopCount", 25),
       contextWindowSize: config.get<number>("contextWindowSize", 100000),
     };
-
-    // Update cache
-    this.configCache = pluginConfig;
-    this.cacheTimestamp = Date.now();
 
     return pluginConfig;
   }
@@ -219,7 +151,7 @@ export class ConfigurationManager {
 
   /**
    * Update API configuration
-   * Requirements: 10.1, 10.4, 2.2 (invalidates cache)
+   * Requirements: 10.1, 10.4
    *
    * @param apiConfig Partial API configuration to update
    */
@@ -262,13 +194,12 @@ export class ConfigurationManager {
       await this.setApiKey(apiConfig.apiKey);
     }
 
-    this.invalidateCache();
     console.log("[ConfigurationManager] API configuration updated");
   }
 
   /**
    * Update permission settings
-   * Requirement: 10.3, 2.2 (invalidates cache)
+   * Requirement: 10.3
    *
    * @param permissions Partial permission settings to update
    */
@@ -308,13 +239,11 @@ export class ConfigurationManager {
       );
     }
 
-    this.invalidateCache();
     console.log("[ConfigurationManager] Permission settings updated");
   }
 
   /**
    * Update default mode
-   * Requirement: 2.2 (invalidates cache)
    *
    * @param mode Default work mode
    */
@@ -323,13 +252,11 @@ export class ConfigurationManager {
       ConfigurationManager.CONFIG_SECTION
     );
     await config.update("defaultMode", mode, vscode.ConfigurationTarget.Global);
-    this.invalidateCache();
     console.log(`[ConfigurationManager] Default mode updated to: ${mode}`);
   }
 
   /**
    * Update max loop count
-   * Requirement: 2.2 (invalidates cache)
    *
    * @param count Maximum loop count
    */
@@ -342,7 +269,6 @@ export class ConfigurationManager {
       count,
       vscode.ConfigurationTarget.Global
     );
-    this.invalidateCache();
     console.log(`[ConfigurationManager] Max loop count updated to: ${count}`);
   }
 
@@ -498,268 +424,47 @@ export class ConfigurationManager {
   /**
    * Update configuration with partial updates
    * Supports batch updates of multiple configuration sections
-   * Requirement: 2.1, 2.2 (optimized to invalidate cache once)
+   * Requirement: 2.1
    *
    * @param config Partial configuration to update
    */
   async updateConfiguration(
     config: Partial<PluginConfiguration>
   ): Promise<void> {
-    // Temporarily disable cache invalidation for batch updates
-    const originalInvalidate = this.invalidateCache.bind(this);
-    let shouldInvalidate = false;
-
-    // Override invalidateCache to track if we need to invalidate
-    this.invalidateCache = () => {
-      shouldInvalidate = true;
-    };
-
-    try {
-      // Update API configuration if provided
-      if (config.api) {
-        await this.updateApiConfiguration(config.api);
-      }
-
-      // Update permissions if provided
-      if (config.permissions) {
-        await this.updatePermissionSettings(config.permissions);
-      }
-
-      // Update default mode if provided
-      if (config.defaultMode !== undefined) {
-        await this.updateDefaultMode(config.defaultMode);
-      }
-
-      // Update max loop count if provided
-      if (config.maxLoopCount !== undefined) {
-        await this.updateMaxLoopCount(config.maxLoopCount);
-      }
-
-      // Update context window size if provided
-      if (config.contextWindowSize !== undefined) {
-        const vsConfig = vscode.workspace.getConfiguration(
-          ConfigurationManager.CONFIG_SECTION
-        );
-        await vsConfig.update(
-          "contextWindowSize",
-          config.contextWindowSize,
-          vscode.ConfigurationTarget.Global
-        );
-        shouldInvalidate = true;
-      }
-
-      console.log("[ConfigurationManager] Configuration updated");
-    } finally {
-      // Restore original invalidateCache and invalidate once if needed
-      this.invalidateCache = originalInvalidate;
-      if (shouldInvalidate) {
-        this.invalidateCache();
-      }
-    }
-  }
-
-  /**
-   * Reset all configuration to default values
-   * Requirement: 2.4, 2.2 (invalidates cache)
-   */
-  async resetToDefaults(): Promise<void> {
-    const config = vscode.workspace.getConfiguration(
-      ConfigurationManager.CONFIG_SECTION
-    );
-
-    // Reset API settings
-    await config.update(
-      "api.baseUrl",
-      "https://api.openai.com/v1",
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update(
-      "api.model",
-      "gpt-4",
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update(
-      "api.temperature",
-      0.7,
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update(
-      "api.maxTokens",
-      4096,
-      vscode.ConfigurationTarget.Global
-    );
-
-    // Reset permissions
-    await config.update(
-      "permissions.allowReadByDefault",
-      true,
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update(
-      "permissions.allowWriteByDefault",
-      false,
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update(
-      "permissions.allowExecuteByDefault",
-      false,
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update(
-      "permissions.alwaysConfirm",
-      ["delete", "execute"],
-      vscode.ConfigurationTarget.Global
-    );
-
-    // Reset advanced settings
-    await config.update(
-      "defaultMode",
-      "code",
-      vscode.ConfigurationTarget.Global
-    );
-    await config.update("maxLoopCount", 25, vscode.ConfigurationTarget.Global);
-    await config.update(
-      "contextWindowSize",
-      100000,
-      vscode.ConfigurationTarget.Global
-    );
-
-    this.invalidateCache();
-    // Note: API key is not reset for security reasons
-    console.log("[ConfigurationManager] Configuration reset to defaults");
-  }
-
-  /**
-   * Export configuration to JSON format (excludes sensitive data)
-   * Requirements: 5.1, 5.3
-   *
-   * @returns Promise<ExportedConfiguration> Exported configuration
-   */
-  async exportConfiguration(): Promise<ExportedConfiguration> {
-    const config = await this.getConfiguration();
-
-    return {
-      version: "1.0.0",
-      api: {
-        baseUrl: config.api.baseUrl,
-        model: config.api.model,
-        temperature: config.api.temperature || 0,
-        maxTokens: config.api.maxTokens || 0,
-        // API key is intentionally excluded for security (Requirement 5.3)
-      },
-      permissions: {
-        allowReadByDefault: config.permissions.allowReadByDefault,
-        allowWriteByDefault: config.permissions.allowWriteByDefault,
-        allowExecuteByDefault: config.permissions.allowExecuteByDefault,
-      },
-      advanced: {
-        defaultMode: config.defaultMode,
-        maxLoopCount: config.maxLoopCount,
-        contextWindowSize: config.contextWindowSize,
-      },
-    };
-  }
-
-  /**
-   * Import configuration from exported format
-   * Requirements: 5.2, 5.5
-   *
-   * @param exportedConfig Exported configuration to import
-   * @throws Error if configuration is invalid
-   */
-  async importConfiguration(
-    exportedConfig: ExportedConfiguration
-  ): Promise<void> {
-    // Validate configuration format (Requirement 5.5)
-    if (!exportedConfig.version) {
-      throw new Error("Invalid configuration: missing version");
+    // Update API configuration if provided
+    if (config.api) {
+      await this.updateApiConfiguration(config.api);
     }
 
-    if (
-      !exportedConfig.api ||
-      !exportedConfig.permissions ||
-      !exportedConfig.advanced
-    ) {
-      throw new Error("Invalid configuration: missing required sections");
+    // Update permissions if provided
+    if (config.permissions) {
+      await this.updatePermissionSettings(config.permissions);
     }
 
-    // Validate API configuration
-    if (
-      !exportedConfig.api.baseUrl ||
-      typeof exportedConfig.api.baseUrl !== "string"
-    ) {
-      throw new Error("Invalid configuration: invalid API base URL");
+    // Update default mode if provided
+    if (config.defaultMode !== undefined) {
+      await this.updateDefaultMode(config.defaultMode);
     }
 
-    if (
-      !exportedConfig.api.model ||
-      typeof exportedConfig.api.model !== "string"
-    ) {
-      throw new Error("Invalid configuration: invalid API model");
+    // Update max loop count if provided
+    if (config.maxLoopCount !== undefined) {
+      await this.updateMaxLoopCount(config.maxLoopCount);
     }
 
-    if (
-      typeof exportedConfig.api.temperature !== "number" ||
-      exportedConfig.api.temperature < 0 ||
-      exportedConfig.api.temperature > 2
-    ) {
-      throw new Error(
-        "Invalid configuration: temperature must be between 0 and 2"
+    // Update context window size if provided
+    if (config.contextWindowSize !== undefined) {
+      const vsConfig = vscode.workspace.getConfiguration(
+        ConfigurationManager.CONFIG_SECTION
+      );
+      await vsConfig.update(
+        "contextWindowSize",
+        config.contextWindowSize,
+        vscode.ConfigurationTarget.Global
       );
     }
 
-    if (
-      typeof exportedConfig.api.maxTokens !== "number" ||
-      exportedConfig.api.maxTokens < 1
-    ) {
-      throw new Error("Invalid configuration: maxTokens must be at least 1");
-    }
-
-    // Validate permissions
-    if (
-      typeof exportedConfig.permissions.allowReadByDefault !== "boolean" ||
-      typeof exportedConfig.permissions.allowWriteByDefault !== "boolean" ||
-      typeof exportedConfig.permissions.allowExecuteByDefault !== "boolean"
-    ) {
-      throw new Error("Invalid configuration: invalid permission settings");
-    }
-
-    // Validate advanced settings
-    if (
-      typeof exportedConfig.advanced.maxLoopCount !== "number" ||
-      exportedConfig.advanced.maxLoopCount < 1
-    ) {
-      throw new Error("Invalid configuration: maxLoopCount must be at least 1");
-    }
-
-    if (
-      typeof exportedConfig.advanced.contextWindowSize !== "number" ||
-      exportedConfig.advanced.contextWindowSize < 1
-    ) {
-      throw new Error(
-        "Invalid configuration: contextWindowSize must be at least 1"
-      );
-    }
-
-    // Apply configuration (Requirement 5.2)
-    await this.updateConfiguration({
-      api: {
-        baseUrl: exportedConfig.api.baseUrl,
-        model: exportedConfig.api.model,
-        temperature: exportedConfig.api.temperature,
-        maxTokens: exportedConfig.api.maxTokens,
-        // API key must be set separately by the user
-      },
-      permissions: {
-        allowReadByDefault: exportedConfig.permissions.allowReadByDefault,
-        allowWriteByDefault: exportedConfig.permissions.allowWriteByDefault,
-        allowExecuteByDefault: exportedConfig.permissions.allowExecuteByDefault,
-      },
-      defaultMode: exportedConfig.advanced.defaultMode,
-      maxLoopCount: exportedConfig.advanced.maxLoopCount,
-      contextWindowSize: exportedConfig.advanced.contextWindowSize,
-    });
-
-    console.log("[ConfigurationManager] Configuration imported successfully");
+    console.log("[ConfigurationManager] Configuration updated");
   }
+
+
 }

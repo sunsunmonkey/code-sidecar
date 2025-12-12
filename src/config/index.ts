@@ -4,6 +4,5 @@
 export { 
   ConfigurationManager, 
   PluginConfiguration,
-  UIConfiguration,
-  ExportedConfiguration
+  UIConfiguration
 } from './ConfigurationManager';

@@ -39,9 +39,6 @@ export interface UseConfigurationReturn {
   updateAdvanced: (field: keyof UIConfiguration['advanced'], value: any) => void;
   saveConfiguration: () => void;
   testConnection: () => void;
-  resetToDefaults: () => void;
-  exportConfiguration: () => void;
-  importConfiguration: (data: string) => void;
   validateAll: () => boolean;
 }
 
@@ -239,36 +236,7 @@ export function useConfiguration(): UseConfigurationReturn {
     postMessage(message);
   }, [config, validateField, postMessage]);
 
-  /**
-   * Reset configuration to defaults
-   */
-  const resetToDefaults = useCallback(() => {
-    const message: ConfigMessage = {
-      type: 'reset_to_defaults'
-    };
-    postMessage(message);
-  }, [postMessage]);
 
-  /**
-   * Export configuration
-   */
-  const exportConfiguration = useCallback(() => {
-    const message: ConfigMessage = {
-      type: 'export_configuration'
-    };
-    postMessage(message);
-  }, [postMessage]);
-
-  /**
-   * Import configuration
-   */
-  const importConfiguration = useCallback((data: string) => {
-    const message: ConfigMessage = {
-      type: 'import_configuration',
-      data
-    };
-    postMessage(message);
-  }, [postMessage]);
 
   /**
    * Handle messages from extension
@@ -297,20 +265,7 @@ export function useConfiguration(): UseConfigurationReturn {
         });
         break;
 
-      case 'configuration_exported':
-        // Handle export - typically download the file
-        // This will be handled by the extension
-        break;
 
-      case 'configuration_imported':
-        if (message.success) {
-          // Reload configuration after successful import
-          const loadMessage: ConfigMessage = { type: 'get_configuration' };
-          postMessage(loadMessage);
-        } else if (message.error) {
-          console.error('Failed to import configuration:', message.error);
-        }
-        break;
 
       case 'validation_error':
         setValidationErrors(message.errors);
@@ -347,9 +302,6 @@ export function useConfiguration(): UseConfigurationReturn {
     updateAdvanced,
     saveConfiguration,
     testConnection,
-    resetToDefaults,
-    exportConfiguration,
-    importConfiguration,
     validateAll,
   };
 }

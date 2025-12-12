@@ -28,9 +28,6 @@ export const ConfigPanel: React.FC = () => {
     updateAdvanced,
     saveConfiguration,
     testConnection,
-    resetToDefaults,
-    exportConfiguration,
-    importConfiguration,
   } = useConfiguration();
 
   // Show loading state while configuration is being loaded
@@ -126,9 +123,6 @@ export const ConfigPanel: React.FC = () => {
         <ConfigActions
           onSave={saveConfiguration}
           onTestConnection={testConnection}
-          onReset={resetToDefaults}
-          onExport={exportConfiguration}
-          onImport={importConfiguration}
           isSaving={isSaving}
           isTesting={isTesting}
           hasValidationErrors={hasValidationErrors}

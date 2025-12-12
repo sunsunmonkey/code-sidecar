@@ -78,9 +78,7 @@ export type UserMessage =
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: any }
   | { type: "test_connection"; apiConfig: any }
-  | { type: "export_configuration" }
-  | { type: "import_configuration"; data: string }
-  | { type: "reset_to_defaults" }
+
   | { type: "permission_response"; requestId: string; approved: boolean };
 
 /**
@@ -310,20 +308,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    if (message.type === "export_configuration") {
-      await this.handleExportConfiguration();
-      return;
-    }
 
-    if (message.type === "import_configuration") {
-      await this.handleImportConfiguration(message.data);
-      return;
-    }
-
-    if (message.type === "reset_to_defaults") {
-      await this.handleResetToDefaults();
-      return;
-    }
 
     // Handle permission response messages
     if (message.type === "permission_response") {
@@ -829,111 +814,5 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  /**
-   * Handle export configuration request
-   */
-  private async handleExportConfiguration(): Promise<void> {
-    try {
-      const exportedConfig =
-        await this.configurationManager.exportConfiguration();
-      const configJson = JSON.stringify(exportedConfig, null, 2);
-      const timestamp = new Date()
-        .toISOString()
-        .replace(/[:.]/g, "-")
-        .slice(0, -5);
-      const filename = `coding-agent-config-${timestamp}.json`;
 
-      const uri = await vscode.window.showSaveDialog({
-        defaultUri: vscode.Uri.file(filename),
-        filters: {
-          "JSON Files": ["json"],
-          "All Files": ["*"],
-        },
-      });
-
-      if (uri) {
-        await vscode.workspace.fs.writeFile(
-          uri,
-          Buffer.from(configJson, "utf8")
-        );
-
-        this.postMessageToWebview({
-          type: "configuration_exported",
-          data: configJson,
-          filename: filename,
-        });
-
-        vscode.window.showInformationMessage(
-          `Configuration exported to ${uri.fsPath}`
-        );
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(
-        `Failed to export configuration: ${errorMessage}`
-      );
-    }
-  }
-
-  /**
-   * Handle import configuration request
-   */
-  private async handleImportConfiguration(data: string): Promise<void> {
-    try {
-      const exportedConfig = JSON.parse(data);
-      await this.configurationManager.importConfiguration(exportedConfig);
-
-      this.postMessageToWebview({
-        type: "configuration_imported",
-        success: true,
-      });
-
-      await this.handleGetConfiguration();
-
-      vscode.window.showInformationMessage(
-        "Configuration imported successfully. Please set your API key."
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      this.postMessageToWebview({
-        type: "configuration_imported",
-        success: false,
-        error: errorMessage,
-      });
-
-      vscode.window.showErrorMessage(
-        `Failed to import configuration: ${errorMessage}`
-      );
-    }
-  }
-
-  /**
-   * Handle reset to defaults request
-   */
-  private async handleResetToDefaults(): Promise<void> {
-    try {
-      const result = await vscode.window.showWarningMessage(
-        "Are you sure you want to reset all configuration to default values? This cannot be undone.",
-        { modal: true },
-        "Reset"
-      );
-
-      if (result !== "Reset") {
-        return;
-      }
-
-      await this.configurationManager.resetToDefaults();
-      await this.handleGetConfiguration();
-
-      vscode.window.showInformationMessage("Configuration reset to defaults");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(
-        `Failed to reset configuration: ${errorMessage}`
-      );
-    }
-  }
 }

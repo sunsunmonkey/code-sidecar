@@ -70,10 +70,7 @@ export interface ApiConfiguration {
 export type ConfigMessage =
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: UIConfiguration }
-  | { type: "test_connection"; apiConfig: ApiConfiguration }
-  | { type: "export_configuration" }
-  | { type: "import_configuration"; data: string }
-  | { type: "reset_to_defaults" };
+  | { type: "test_connection"; apiConfig: ApiConfiguration };
 
 /**
  * Responses sent from extension backend to webview
@@ -91,8 +88,6 @@ export type ConfigResponse =
       error?: string;
       responseTime?: number;
     }
-  | { type: "configuration_exported"; data: string }
-  | { type: "configuration_imported"; success: boolean; error?: string }
   | { type: "validation_error"; errors: ValidationErrors };
 
 /**

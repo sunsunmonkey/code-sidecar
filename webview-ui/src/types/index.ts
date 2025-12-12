@@ -6,7 +6,6 @@
 // Export configuration-related types
 export type {
   UIConfiguration,
-  ExportedConfiguration,
   ValidationErrors
 } from './config';
 

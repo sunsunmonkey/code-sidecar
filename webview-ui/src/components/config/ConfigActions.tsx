@@ -4,9 +4,6 @@ import { Button } from '../common/Button';
 export interface ConfigActionsProps {
   onSave: () => void;
   onTestConnection: () => void;
-  onReset: () => void;
-  onExport: () => void;
-  onImport: (data: string) => void;
   isSaving?: boolean;
   isTesting?: boolean;
   hasValidationErrors?: boolean;
@@ -16,40 +13,16 @@ export interface ConfigActionsProps {
 /**
  * ConfigActions component
  * Provides action buttons for configuration management
- * Requirements: 2.4, 5.1, 5.2, 6.1
+ * Requirements: 6.1
  */
 export const ConfigActions: React.FC<ConfigActionsProps> = ({
   onSave,
   onTestConnection,
-  onReset,
-  onExport,
-  onImport,
   isSaving = false,
   isTesting = false,
   hasValidationErrors = false,
   testResult = null,
 }) => {
-  /**
-   * Handle file import
-   * Opens a file input dialog for importing configuration
-   */
-  const handleImportClick = () => {
-    const input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.json';
-    input.onchange = (e) => {
-      const file = (e.target as HTMLInputElement).files?.[0];
-      if (file) {
-        const reader = new FileReader();
-        reader.onload = (event) => {
-          const data = event.target?.result as string;
-          onImport(data);
-        };
-        reader.readAsText(file);
-      }
-    };
-    input.click();
-  };
 
   return (
     <section className="p-4 mb-4 border border-[var(--vscode-panel-border)] rounded bg-[var(--vscode-editor-background)]">
@@ -95,29 +68,7 @@ export const ConfigActions: React.FC<ConfigActionsProps> = ({
         </div>
       )}
 
-      <div className="flex gap-3 pt-3 border-t border-[var(--vscode-panel-border)] flex-wrap items-center">
-        <Button
-          onClick={onReset}
-          variant="secondary"
-          disabled={isSaving || isTesting}
-        >
-          Reset to Defaults
-        </Button>
-        <Button
-          onClick={onExport}
-          variant="secondary"
-          disabled={isSaving || isTesting}
-        >
-          Export Configuration
-        </Button>
-        <Button
-          onClick={handleImportClick}
-          variant="secondary"
-          disabled={isSaving || isTesting}
-        >
-          Import Configuration
-        </Button>
-      </div>
+
     </section>
   );
 };
