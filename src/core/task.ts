@@ -11,6 +11,7 @@ import { XMLParser } from "fast-xml-parser";
 import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
 import { ConversationHistoryManager } from "../managers";
+import { ConfigurationManager } from "../config/ConfigurationManager";
 
 /**
  * Text content in assistant message
@@ -52,7 +53,6 @@ export class Task {
   private systemPrompt: string = "";
   private history: HistoryItem[] = [];
   private loopCount: number = 0;
-  private readonly MAX_LOOPS: number = 5;
   private readonly id: string;
   private toolExecutor: ToolExecutor;
   private promptBuilder: PromptBuilder;
@@ -65,6 +65,7 @@ export class Task {
     private provider: AgentWebviewProvider,
     private apiConfiguration: ApiConfiguration,
     private message: string,
+    private maxLoopCount: number,
     toolExecutor: ToolExecutor,
     promptBuilder: PromptBuilder,
     contextCollector: ContextCollector,
@@ -74,6 +75,7 @@ export class Task {
     this.id = `task-${Date.now()}-${Math.random()
       .toString(36)
       .substring(2, 11)}`;
+    this.maxLoopCount = maxLoopCount;
     this.toolExecutor = toolExecutor;
     this.promptBuilder = promptBuilder;
     this.contextCollector = contextCollector;
@@ -151,7 +153,7 @@ export class Task {
       if (!this.shouldContinueLoop()) {
         this.provider.postMessageToWebview({
           type: "error",
-          message: `已达到最大循环次数限制 (${this.MAX_LOOPS})。任务可能过于复杂，请简化任务或分解为多个步骤。`,
+          message: `已达到最大循环次数限制 (${this.maxLoopCount})。任务可能过于复杂，请简化任务或分解为多个步骤。`,
         });
         this.provider.postMessageToWebview({ type: "task_complete" });
         return;
@@ -403,7 +405,7 @@ export class Task {
    * Check if the loop should continue
    */
   private shouldContinueLoop(): boolean {
-    return this.loopCount < this.MAX_LOOPS;
+    return this.loopCount < this.maxLoopCount;
   }
 
   /**

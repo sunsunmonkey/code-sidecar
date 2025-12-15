@@ -330,10 +330,14 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     // Handle user messages
     if (message.type === "user_message") {
+      const { maxLoopCount } =
+        await this.configurationManager.getConfiguration();
+
       this.currentTask = new Task(
         this,
         this.apiConfiguration,
         message.content,
+        maxLoopCount,
         this.toolExecutor,
         this.promptBuilder,
         this.contextCollector,
