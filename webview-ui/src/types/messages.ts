@@ -130,7 +130,7 @@ export type WebviewMessage =
   | { type: "conversation_deleted"; conversationId: string }
   | { type: "navigate"; route: string }
   | { type: "permission_request"; request: PermissionRequest }
-  | { type: "set_input_text"; text: string };
+  | { type: "set_input_value"; value: string };
 
 /**
  * Messages sent from webview to extension

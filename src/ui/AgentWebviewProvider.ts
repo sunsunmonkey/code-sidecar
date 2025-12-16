@@ -60,7 +60,7 @@ export type WebviewMessage =
   | { type: "configuration_imported"; success: boolean; error?: string }
   | { type: "validation_error"; errors: Record<string, string> }
   | { type: "permission_request"; request: PermissionRequest }
-  | { type: "set_input_text"; text: string };
+  | { type: "set_input_value"; value: string };
 
 /**
  * Message types received from webview
@@ -816,12 +816,12 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   }
 
   /**
-   * Set input text in webview
+   * Set input value in webview
    */
-  setInputText(text: string): void {
+  setInputValue(value: string): void {
     this.postMessageToWebview({
-      type: "set_input_text",
-      text: text,
+      type: "set_input_value",
+      value,
     });
   }
 }

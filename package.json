@@ -42,7 +42,8 @@
         {
           "type": "webview",
           "id": "coding-agent-slim.SidebarProvider",
-          "name": "Coding Agent Slim"
+          "name": "Coding Agent Slim",
+          "icon": "assets/icons/icon.svg"
         }
       ]
     },

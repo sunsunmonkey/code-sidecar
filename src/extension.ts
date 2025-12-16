@@ -29,17 +29,15 @@ export async function activate(context: vscode.ExtensionContext) {
         const fileName = editor.document.fileName;
         const startLine = selection.start.line + 1;
         const endLine = selection.end.line + 1;
-
         const analysisPrompt = `${fileName}:${startLine}-${endLine}
 
 \`\`\`
 ${selectedText}
 \`\`\`
 `;
-        // 将分析提示发送到webview的输入框
-        provider.setInputText(analysisPrompt);
+        provider.setInputValue(analysisPrompt);
 
-        // 显示侧边栏
+        // vscode 自带的关于 webview 的命令，自动唤醒 webview 
         vscode.commands.executeCommand(
           "coding-agent-slim.SidebarProvider.focus"
         );
