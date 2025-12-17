@@ -1,6 +1,77 @@
 import * as vscode from "vscode";
 import * as path from "path";
 
+
+export type ContextKind =
+  | "system_env"
+  | "user_message"
+  | "history"
+  | "mention_file"
+  | "mention_folder"
+  | "mention_url"
+  | "diagnostics"
+  | "terminal"
+  | "git_changes"
+  | "git_commit"
+  | "selection"
+  | "open_tabs"
+  | "code_search"
+  | "workspace";
+
+export type Truncation =
+  | { mode: "none" }
+  | { mode: "head"; maxLines: number }
+  | { mode: "tail"; maxLines: number }
+  | { mode: "head_tail"; head: number; tail: number }
+  | { mode: "summarize"; summaryModelId?: string };
+
+export interface ContextItem {
+  id: string;
+  kind: ContextKind;
+  title: string;
+  priority: number;
+  content: string;
+  tokenEstimate: number;
+  truncation: Truncation;
+  sourceMeta?: Record<string, any>;
+  pinned?: boolean;
+  appliedTruncation?: string;
+}
+
+export interface ContextSnapshotItem {
+  id: string;
+  title: string;
+  kind: ContextKind;
+  tokens: number;
+  priority: number;
+  pinned?: boolean;
+  status: "included" | "truncated" | "dropped";
+  note?: string;
+}
+
+export interface ContextSnapshot {
+  totalTokens: number;
+  budgetTokens: number;
+  inputBudget: number;
+  reservedOutputTokens: number;
+  systemPromptTokens: number;
+  userMessageTokens: number;
+  items: ContextSnapshotItem[];
+}
+
+export interface BudgetedContext {
+  selectedItems: ContextItem[];
+  droppedItems: ContextItem[];
+  formattedContext: string;
+  totalTokens: number;
+  budgetTokens: number;
+  inputBudget: number;
+  reservedOutputTokens: number;
+  systemPromptTokens: number;
+  userMessageTokens: number;
+  snapshot: ContextSnapshot;
+}
+
 /**
  * Diagnostic information from VSCode
  */
@@ -58,9 +129,10 @@ export interface ProjectContext {
  * ContextCollector collects project context information
  */
 export class ContextCollector {
-  private readonly MAX_CONTEXT_SIZE = 100000; // Maximum context size in characters
   private readonly MAX_FILE_SIZE = 50000; // Maximum single file size in characters
   private readonly MAX_FILES_IN_TREE = 500; // Maximum files to include in tree
+  private readonly HEAD_TAIL_DEFAULT = { head: 120, tail: 80 };
+  private readonly FAST_TOKEN_RATIO = 4; // Roughly 4 chars per token fallback
 
   /**
    * Collect current project context
@@ -348,73 +420,6 @@ export class ContextCollector {
   }
 
   /**
-   * Format context as string for inclusion in messages
-   */
-  formatContext(context: ProjectContext): string {
-    const parts: string[] = [];
-
-    // Add active file
-    if (context.activeFile) {
-      parts.push(`## Current File: ${context.activeFile.path}`);
-      parts.push(`Language: ${context.activeFile.language}`);
-      parts.push(`\`\`\`${context.activeFile.language}`);
-      parts.push(context.activeFile.content);
-      parts.push("```");
-    }
-
-    // Add selection
-    if (context.selection) {
-      parts.push(
-        `\n## Selected Code (lines ${context.selection.startLine}-${context.selection.endLine}):`
-      );
-      parts.push("```");
-      parts.push(context.selection.text);
-      parts.push("```");
-    }
-
-    // Add cursor position
-    if (context.cursorPosition) {
-      parts.push(
-        `\n## Cursor Position: Line ${context.cursorPosition.line}, Column ${context.cursorPosition.character}`
-      );
-    }
-
-    // Add diagnostics
-    if (context.diagnostics && context.diagnostics.length > 0) {
-      parts.push(`\n## Diagnostics (${context.diagnostics.length}):`);
-      for (const diag of context.diagnostics.slice(0, 20)) {
-        // Limit to 20
-        parts.push(
-          `- [${diag.severity.toUpperCase()}] ${diag.file}:${diag.line}:${
-            diag.column
-          } - ${diag.message}`
-        );
-      }
-      if (context.diagnostics.length > 20) {
-        parts.push(`... and ${context.diagnostics.length - 20} more`);
-      }
-    }
-
-    // Add file tree (simplified)
-    if (context.fileTree && context.fileTree.length > 0) {
-      parts.push(`\n## Project Structure:`);
-      parts.push(this.formatFileTree(context.fileTree, 0, 3)); // Max depth 3
-    }
-
-    const formatted = parts.join("\n");
-
-    // Apply size limit (Requirement 8.3)
-    if (formatted.length > this.MAX_CONTEXT_SIZE) {
-      return (
-        formatted.substring(0, this.MAX_CONTEXT_SIZE) +
-        `\n\n[Context truncated: exceeded ${this.MAX_CONTEXT_SIZE} characters]`
-      );
-    }
-
-    return formatted;
-  }
-
-  /**
    * Format file tree as string
    */
   private formatFileTree(
@@ -444,43 +449,429 @@ export class ContextCollector {
   }
 
   /**
-   * Truncate context intelligently to fit size limit
+   * Fast token estimation (char/4 fallback)
    */
-  truncateContext(context: ProjectContext): ProjectContext {
-    const truncated = { ...context };
+  estimateTokens(text: string): number {
+    if (!text) {
+      return 0;
+    }
+    return Math.ceil(text.length / this.FAST_TOKEN_RATIO) + 4;
+  }
 
-    // Priority: active file > selection > diagnostics > file tree
-    let currentSize = 0;
+  /**
+   * Build ContextItems from current project state plus parsed mentions
+   */
+  async collectContextItems(
+    userMessage: string,
+    existingContext?: ProjectContext
+  ): Promise<ContextItem[]> {
+    const items: ContextItem[] = [];
+    const projectContext = existingContext ?? (await this.collectContext());
 
-    // Always include active file (truncated if needed)
-    if (truncated.activeFile) {
-      const fileSize = truncated.activeFile.content.length;
-      if (fileSize > this.MAX_FILE_SIZE) {
-        truncated.activeFile.content =
-          truncated.activeFile.content.substring(0, this.MAX_FILE_SIZE) +
-          "\n[... truncated]";
+    // System env
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    const workspacePath =
+      workspaceFolders && workspaceFolders.length > 0
+        ? workspaceFolders[0].uri.fsPath
+        : "No workspace open";
+    const envContent = [
+      `OS: ${process.platform} (${process.arch})`,
+      `VS Code: ${vscode.version}`,
+      `Workspace: ${workspacePath}`,
+      `Shell: ${process.env.SHELL || process.env.COMSPEC || "unknown"}`,
+    ].join("\n");
+    items.push({
+      id: "system-env",
+      kind: "system_env",
+      title: "System Environment",
+      priority: 5,
+      content: envContent,
+      tokenEstimate: this.estimateTokens(envContent),
+      truncation: { mode: "none" },
+    });
+
+    // Active file
+    if (projectContext.activeFile) {
+      const activeContent = projectContext.activeFile.content;
+      const activeItem: ContextItem = {
+        id: `file-${projectContext.activeFile.path}`,
+        kind: "mention_file",
+        title: `Current File: ${projectContext.activeFile.path}`,
+        priority: 90,
+        content: activeContent,
+        tokenEstimate: this.estimateTokens(activeContent),
+        truncation: {
+          mode: "head_tail",
+          head: this.HEAD_TAIL_DEFAULT.head,
+          tail: this.HEAD_TAIL_DEFAULT.tail,
+        },
+        sourceMeta: {
+          path: projectContext.activeFile.path,
+          language: projectContext.activeFile.language,
+        },
+      };
+      items.push(activeItem);
+    }
+
+    // Selection
+    if (projectContext.selection) {
+      const selContent = projectContext.selection.text;
+      items.push({
+        id: `selection-${Date.now()}`,
+        kind: "selection",
+        title: `Selection (${projectContext.selection.startLine}-${projectContext.selection.endLine})`,
+        priority: 95,
+        content: selContent,
+        tokenEstimate: this.estimateTokens(selContent),
+        truncation: { mode: "none" },
+        sourceMeta: {
+          startLine: projectContext.selection.startLine,
+          endLine: projectContext.selection.endLine,
+        },
+      });
+    } else if (vscode.window.activeTextEditor) {
+      const editor = vscode.window.activeTextEditor;
+      const cursor = editor.selection.active;
+      const startLine = Math.max(cursor.line - 8, 0);
+      const endLine = Math.min(cursor.line + 8, editor.document.lineCount - 1);
+      const endChar = editor.document.lineAt(endLine).range.end.character;
+      const range = new vscode.Range(startLine, 0, endLine, endChar);
+      const nearby = editor.document.getText(range);
+      items.push({
+        id: `cursor-${Date.now()}`,
+        kind: "selection",
+        title: `Cursor window (${startLine + 1}-${endLine + 1})`,
+        priority: 85,
+        content: nearby,
+        tokenEstimate: this.estimateTokens(nearby),
+        truncation: { mode: "none" },
+        sourceMeta: {
+          startLine: startLine + 1,
+          endLine: endLine + 1,
+        },
+      });
+    }
+
+    // Diagnostics
+    if (projectContext.diagnostics && projectContext.diagnostics.length > 0) {
+      const diagLines = this.formatDiagnostics(projectContext.diagnostics);
+      const diagContent = diagLines.join("\n");
+      items.push({
+        id: "diagnostics",
+        kind: "diagnostics",
+        title: "Diagnostics (Problems)",
+        priority: 70,
+        content: diagContent,
+        tokenEstimate: this.estimateTokens(diagContent),
+        truncation: { mode: "tail", maxLines: 50 },
+        sourceMeta: { count: projectContext.diagnostics.length },
+      });
+    }
+
+    // Open tabs (metadata only)
+    const openEditors = vscode.window.visibleTextEditors;
+    if (openEditors.length > 0) {
+      const openContent = openEditors
+        .map((ed) => this.getRelativePath(ed.document.fileName))
+        .join("\n");
+      items.push({
+        id: "open-tabs",
+        kind: "open_tabs",
+        title: "Open Tabs",
+        priority: 40,
+        content: openContent,
+        tokenEstimate: this.estimateTokens(openContent),
+        truncation: { mode: "head", maxLines: 40 },
+      });
+    }
+
+    // Workspace tree snapshot (low priority)
+    if (projectContext.fileTree && projectContext.fileTree.length > 0) {
+      const treeContent = this.formatFileTree(projectContext.fileTree, 0, 3);
+      items.push({
+        id: "workspace-tree",
+        kind: "workspace",
+        title: "Workspace Structure",
+        priority: 20,
+        content: treeContent,
+        tokenEstimate: this.estimateTokens(treeContent),
+        truncation: { mode: "head", maxLines: 120 },
+      });
+    }
+
+    // Mentions parsed from user message
+    const mentionItems = await this.parseMentions(userMessage);
+    items.push(...mentionItems);
+
+    return items;
+  }
+
+  /**
+   * Parse @mentions in the user message to enrich context
+   */
+  private async parseMentions(userMessage: string): Promise<ContextItem[]> {
+    const items: ContextItem[] = [];
+    const fileRegex = /@file:([^\s]+)/g;
+    const folderRegex = /@folder:([^\s]+)/g;
+    const problemsMentioned = /@problems|@diagnostics/.test(userMessage);
+    const terminalMentioned = /@terminal/.test(userMessage);
+
+    let match: RegExpExecArray | null;
+
+    while ((match = fileRegex.exec(userMessage)) !== null) {
+      const filePath = match[1];
+      const content = await this.collectFileContext(filePath);
+      items.push({
+        id: `mention-file-${filePath}-${match.index}`,
+        kind: "mention_file",
+        title: `@file ${filePath}`,
+        priority: 85,
+        content,
+        tokenEstimate: this.estimateTokens(content),
+        truncation: {
+          mode: "head_tail",
+          head: this.HEAD_TAIL_DEFAULT.head,
+          tail: this.HEAD_TAIL_DEFAULT.tail,
+        },
+        sourceMeta: { path: filePath },
+      });
+    }
+
+    while ((match = folderRegex.exec(userMessage)) !== null) {
+      const folderPath = match[1];
+      const workspaceFolders = vscode.workspace.workspaceFolders;
+      if (!workspaceFolders || workspaceFolders.length === 0) {
+        continue;
       }
-      currentSize += truncated.activeFile.content.length;
+      const absolutePath = path.isAbsolute(folderPath)
+        ? folderPath
+        : path.join(workspaceFolders[0].uri.fsPath, folderPath);
+      const tree = await this.collectFileTree();
+      const treeText =
+        tree.length > 0 ? this.formatFileTree(tree, 0, 2) : "[No files found]";
+      items.push({
+        id: `mention-folder-${folderPath}-${match.index}`,
+        kind: "mention_folder",
+        title: `@folder ${folderPath}`,
+        priority: 60,
+        content: treeText,
+        tokenEstimate: this.estimateTokens(treeText),
+        truncation: { mode: "head", maxLines: 200 },
+        sourceMeta: { path: absolutePath },
+      });
     }
 
-    // Include selection if space allows
-    if (truncated.selection) {
-      currentSize += truncated.selection.text.length;
+    if (problemsMentioned) {
+      const diagnostics = await this.collectDiagnostics();
+      const diagLines = this.formatDiagnostics(diagnostics);
+      const diagContent = diagLines.join("\n");
+      items.push({
+        id: "mention-diagnostics",
+        kind: "diagnostics",
+        title: "@problems",
+        priority: 75,
+        content: diagContent,
+        tokenEstimate: this.estimateTokens(diagContent),
+        truncation: { mode: "tail", maxLines: 50 },
+        sourceMeta: { count: diagnostics.length },
+        pinned: true,
+      });
     }
 
-    // Limit diagnostics if needed
-    if (truncated.diagnostics && currentSize < this.MAX_CONTEXT_SIZE) {
-      const remainingSize = this.MAX_CONTEXT_SIZE - currentSize;
-      const avgDiagSize = 100; // Estimated average diagnostic size
-      const maxDiags = Math.floor(remainingSize / avgDiagSize);
-      truncated.diagnostics = truncated.diagnostics.slice(0, maxDiags);
+    if (terminalMentioned) {
+      const placeholder =
+        "[Terminal context unavailable: VS Code API exposes only the visible buffer. Please re-run the command to capture output.]";
+      items.push({
+        id: "mention-terminal",
+        kind: "terminal",
+        title: "@terminal",
+        priority: 65,
+        content: placeholder,
+        tokenEstimate: this.estimateTokens(placeholder),
+        truncation: { mode: "none" },
+        sourceMeta: { limited: true },
+      });
     }
 
-    // Remove file tree if context is too large
-    if (currentSize > this.MAX_CONTEXT_SIZE * 0.8) {
-      truncated.fileTree = undefined;
+    return items;
+  }
+
+  private formatDiagnostics(diagnostics: DiagnosticInfo[]): string[] {
+    return diagnostics.map(
+      (diag) =>
+        `[${diag.severity.toUpperCase()}] ${diag.file}:${diag.line}:${diag.column} - ${diag.message}`
+    );
+  }
+
+  /**
+   * Budget context items using a greedy strategy with truncation/drop fallback
+   */
+  budgetContextItems(params: {
+    items: ContextItem[];
+    userMessage: string;
+    systemPrompt: string;
+    contextWindowTokens: number;
+    reservedOutputTokens?: number;
+  }): BudgetedContext {
+    const reservedOutputTokens =
+      params.reservedOutputTokens ??
+      Math.floor(params.contextWindowTokens * 0.2);
+    const budgetTokens = Math.max(
+      params.contextWindowTokens - reservedOutputTokens,
+      0
+    );
+    const systemPromptTokens = this.estimateTokens(params.systemPrompt);
+    const userMessageTokens = this.estimateTokens(params.userMessage);
+    const selected: ContextItem[] = [];
+    const dropped: ContextItem[] = [];
+
+    let usedTokens = systemPromptTokens + userMessageTokens;
+
+    const sortedItems = [...params.items].sort((a, b) => {
+      const pinnedDelta = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+      if (pinnedDelta !== 0) {
+        return pinnedDelta;
+      }
+      if (b.priority === a.priority) {
+        return b.tokenEstimate - a.tokenEstimate;
+      }
+      return b.priority - a.priority;
+    });
+
+    for (const item of sortedItems) {
+      const remaining = budgetTokens - usedTokens;
+      if (remaining <= 0) {
+        dropped.push({ ...item, appliedTruncation: "dropped" });
+        continue;
+      }
+
+      let workingItem: ContextItem = { ...item };
+
+      if (workingItem.tokenEstimate > remaining) {
+        const truncated = this.truncateContent(
+          workingItem.content,
+          workingItem.truncation
+        );
+        workingItem = {
+          ...workingItem,
+          content: truncated.content,
+          tokenEstimate: this.estimateTokens(truncated.content),
+          appliedTruncation: truncated.note,
+        };
+      }
+
+      if (workingItem.tokenEstimate <= remaining || workingItem.pinned) {
+        selected.push(workingItem);
+        usedTokens += workingItem.tokenEstimate;
+      } else {
+        dropped.push({ ...workingItem, appliedTruncation: "dropped" });
+      }
     }
 
-    return truncated;
+    const formattedContext = selected
+      .map((item) => {
+        const header = `### ${item.title} [${item.kind}]${
+          item.appliedTruncation ? ` (${item.appliedTruncation})` : ""
+        }`;
+        return `${header}\n${item.content}`;
+      })
+      .join("\n\n");
+
+    const snapshotItems: ContextSnapshotItem[] = [
+      ...selected.map(
+        (item): ContextSnapshotItem => ({
+          id: item.id,
+          title: item.title,
+          kind: item.kind,
+          tokens: item.tokenEstimate,
+          priority: item.priority,
+          pinned: item.pinned,
+          status: item.appliedTruncation ? "truncated" : "included",
+          note: item.appliedTruncation,
+        })
+      ),
+      ...dropped.map(
+        (item): ContextSnapshotItem => ({
+          id: item.id,
+          title: item.title,
+          kind: item.kind,
+          tokens: item.tokenEstimate,
+          priority: item.priority,
+          pinned: item.pinned,
+          status: "dropped",
+          note: item.appliedTruncation,
+        })
+      ),
+    ];
+
+    return {
+      selectedItems: selected,
+      droppedItems: dropped,
+      formattedContext,
+      totalTokens: usedTokens,
+      budgetTokens,
+      inputBudget: budgetTokens,
+      reservedOutputTokens,
+      systemPromptTokens,
+      userMessageTokens,
+      snapshot: {
+        totalTokens: usedTokens,
+        budgetTokens,
+        inputBudget: budgetTokens,
+        reservedOutputTokens,
+        systemPromptTokens,
+        userMessageTokens,
+        items: snapshotItems,
+      },
+    };
+  }
+
+  /**
+   * Apply truncation policy to content
+   */
+  private truncateContent(
+    content: string,
+    truncation: Truncation
+  ): { content: string; note?: string } {
+    if (truncation.mode === "none") {
+      return { content };
+    }
+
+    const lines = content.split("\n");
+    if (truncation.mode === "tail") {
+      const tailLines = lines.slice(-truncation.maxLines);
+      return {
+        content: tailLines.join("\n"),
+        note: `tail (${tailLines.length} lines)`,
+      };
+    }
+
+    if (truncation.mode === "head") {
+      const headLines = lines.slice(0, truncation.maxLines);
+      return {
+        content: headLines.join("\n"),
+        note: `head (${headLines.length} lines)`,
+      };
+    }
+
+    if (truncation.mode === "head_tail") {
+      const headLines = lines.slice(0, truncation.head);
+      const tailLines = lines.slice(-truncation.tail);
+      return {
+        content: `${headLines.join("\n")}\n...\n${tailLines.join("\n")}`,
+        note: `head_tail (${headLines.length}+${tailLines.length} lines)`,
+      };
+    }
+
+    if (truncation.mode === "summarize") {
+      const headLines = lines.slice(0, this.HEAD_TAIL_DEFAULT.head);
+      const tailLines = lines.slice(-this.HEAD_TAIL_DEFAULT.tail);
+      return {
+        content: `${headLines.join("\n")}\n...\n${tailLines.join("\n")}`,
+        note: "summarized (head+tail fallback)",
+      };
+    }
+
+    return { content };
   }
 }

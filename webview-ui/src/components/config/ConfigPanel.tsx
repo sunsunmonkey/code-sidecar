@@ -75,7 +75,7 @@ export const ConfigPanel: React.FC = () => {
         </h1>
         <p className="text-[13px] text-(--vscode-descriptionForeground) m-0 leading-normal">
           {isFirstTime 
-            ? '👋 Welcome! Let\'s set up your AI Coding Assistant to get started.'
+            ? 'Welcome! Let\'s set up your AI Coding Assistant to get started.'
             : 'Configure your AI Coding Assistant settings'
           }
         </p>
@@ -85,7 +85,7 @@ export const ConfigPanel: React.FC = () => {
         <div className="m-0 mb-6 p-5 bg-(--vscode-textBlockQuote-background) border-l-4 border-l-[var(--vscode-textLink-foreground)] rounded">
           <div>
             <h2 className="text-base font-semibold text-[var(--vscode-foreground)] m-0 mb-3">
-              🚀 Quick Setup
+              Quick Setup
             </h2>
             <p className="text-[13px] text-[var(--vscode-foreground)] m-0 mb-3 leading-normal">
               To get started, you'll need to configure your API settings. 

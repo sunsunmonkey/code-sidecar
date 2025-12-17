@@ -4,15 +4,18 @@ import { InputBox } from "./components/InputBox";
 import { ModeSelector } from "./components/ModeSelector";
 import { ConversationList } from "./components/ConversationList";
 import { ConfigPanel } from "./components/config/ConfigPanel";
+import { Settings2, Sparkles } from "lucide-react";
 import type {
   DisplayMessage,
   WebviewMessage,
   ToolUse,
   ToolResult,
   WorkMode,
+  ContextSnapshot,
 } from "./types/messages";
 import { vscode } from "./utils/vscode";
 import { useEvent } from "react-use";
+import { ContextPanel } from "./components/ContextPanel";
 
 type Tab = "chat" | "config";
 
@@ -25,6 +28,8 @@ function App() {
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentMode, setCurrentMode] = useState<WorkMode>("code");
   const [inputValue, setInputValue] = useState<string>("");
+  const [contextSnapshot, setContextSnapshot] =
+    useState<ContextSnapshot | null>(null);
 
   const setMessages = (msg: React.SetStateAction<DisplayMessage[]>) => {
     console.log(msg);
@@ -85,6 +90,10 @@ function App() {
       case "set_input_value":
         // Handle setting input text from extension
         setInputValue((prev) => prev + message.value);
+        break;
+
+      case "context_snapshot":
+        setContextSnapshot(message.context);
         break;
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -299,7 +308,7 @@ function App() {
         msg.id === requestId
           ? {
               ...msg,
-              content: approved ? "✅ Approved" : "❌ Denied",
+              content: approved ? "Approved" : "Denied",
             }
           : msg
       )
@@ -314,40 +323,71 @@ function App() {
   return (
     <>
       <div style={{ display: tab === "chat" ? "block" : "none" }}>
-        <div className="flex flex-col h-screen w-full">
-          <div className="flex items-center justify-between gap-2 p-3 bg-(--vscode-sideBar-background) border-b border-(--vscode-panel-border) shrink-0">
-            <ModeSelector
-              currentMode={currentMode}
-              onModeChange={handleModeChange}
-            />
+        <div className="flex flex-col h-screen w-full bg-[var(--vscode-sideBar-background)]">
+          <header className="flex items-center justify-between gap-3 px-4 py-2.5 bg-(--vscode-sideBarSectionHeader-background) shrink-0">
+            <div className="flex items-center gap-3">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-(--vscode-badge-background) text-(--vscode-badge-foreground)">
+                <Sparkles size={18} strokeWidth={2} />
+              </div>
+              <div className="flex flex-col leading-tight">
+                <span className="text-sm font-semibold text-(--vscode-foreground) uppercase tracking-wide">
+                  Coding Agent
+                </span>
+                <span className="text-[12px] text-(--vscode-descriptionForeground)">
+                  Chat · Tasks · Context
+                </span>
+              </div>
+            </div>
             <button
-              className="bg-transparent border border-(--vscode-button-border,transparent) text-(--vscode-button-foreground) px-2 py-1 cursor-pointer rounded-sm text-base transition-colors hover:bg-(--vscode-button-hoverBackground)"
+              className="bg-transparent text-(--vscode-button-foreground) px-2.5 py-1.5 cursor-pointer rounded-sm text-sm transition-colors hover:bg-(--vscode-button-hoverBackground)"
               onClick={() => setTab("config")}
               title="Open Configuration"
+              aria-label="Open configuration"
             >
-              ⚙️
+              <Settings2 size={16} strokeWidth={2} />
             </button>
+          </header>
+
+          <div className="flex-1 flex flex-col xl:flex-row gap-2 p-2 md:p-3 overflow-hidden">
+            <aside className="w-full xl:w-[260px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-0 xl:pr-1">
+              <ContextPanel snapshot={contextSnapshot} />
+              <ConversationList vscode={vscode} />
+            </aside>
+
+            <div className="flex flex-col gap-2 overflow-hidden flex-1 min-h-0">
+              <div className="flex-1 overflow-hidden rounded-lg bg-[var(--vscode-editor-background)] shadow-[0_8px_22px_rgba(0,0,0,0.18)] flex flex-col min-h-0">
+                <MessageList
+                  messages={messages}
+                  onPermissionResponse={handlePermissionResponse}
+                />
+              </div>
+
+              <div className="rounded-lg bg-[var(--vscode-editor-background)] p-2 md:p-3 shadow-[0_6px_16px_rgba(0,0,0,0.16)]">
+                <InputBox
+                  onSend={sendMessage}
+                  onClear={clearConversation}
+                  disabled={isProcessing}
+                  inputValue={inputValue}
+                  setInputValue={setInputValue}
+                  className="flex-1 min-w-[260px]"
+                  modeSelector={
+                    <ModeSelector
+                      currentMode={currentMode}
+                      onModeChange={handleModeChange}
+                    />
+                  }
+                />
+              </div>
+            </div>
           </div>
-          <ConversationList vscode={vscode} />
-          <MessageList
-            messages={messages}
-            onPermissionResponse={handlePermissionResponse}
-          />
-          <InputBox
-            onSend={sendMessage}
-            onClear={clearConversation}
-            disabled={isProcessing}
-            inputValue={inputValue}
-            setInputValue={setInputValue}
-          />
         </div>
       </div>
 
       <div style={{ display: tab === "config" ? "block" : "none" }}>
         <div className="flex flex-col h-screen w-full">
-          <div className="flex items-center gap-3 p-3 bg-(--vscode-sideBar-background) border-b border-(--vscode-panel-border) shrink-0">
+          <div className="flex items-center gap-3 p-3 bg-(--vscode-sideBar-background) shrink-0">
             <button
-              className="bg-transparent border border-(--vscode-button-border,transparent) text-(--vscode-button-foreground) px-3 py-1 cursor-pointer rounded-sm text-sm transition-colors hover:bg-(--vscode-button-hoverBackground)"
+              className="bg-transparent text-(--vscode-button-foreground) px-3 py-1 cursor-pointer rounded-sm text-sm transition-colors hover:bg-(--vscode-button-hoverBackground)"
               onClick={() => setTab("chat")}
               title="Back to Chat"
             >

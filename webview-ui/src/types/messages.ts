@@ -53,6 +53,43 @@ export interface OperationRecord {
   };
 }
 
+export type ContextKind =
+  | "system_env"
+  | "user_message"
+  | "history"
+  | "mention_file"
+  | "mention_folder"
+  | "mention_url"
+  | "diagnostics"
+  | "terminal"
+  | "git_changes"
+  | "git_commit"
+  | "selection"
+  | "open_tabs"
+  | "code_search"
+  | "workspace";
+
+export interface ContextItemView {
+  id: string;
+  title: string;
+  kind: ContextKind;
+  tokens: number;
+  priority: number;
+  pinned?: boolean;
+  status: "included" | "truncated" | "dropped";
+  note?: string;
+}
+
+export interface ContextSnapshot {
+  totalTokens: number;
+  budgetTokens: number;
+  inputBudget: number;
+  reservedOutputTokens: number;
+  systemPromptTokens: number;
+  userMessageTokens: number;
+  items: ContextItemView[];
+}
+
 /**
  * API Configuration subset for connection testing
  */
@@ -129,6 +166,7 @@ export type WebviewMessage =
   | { type: "conversation_list"; conversations: ConversationSummary[] }
   | { type: "conversation_deleted"; conversationId: string }
   | { type: "navigate"; route: string }
+  | { type: "context_snapshot"; context: ContextSnapshot }
   | { type: "permission_request"; request: PermissionRequest }
   | { type: "set_input_value"; value: string };
 

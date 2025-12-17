@@ -1,4 +1,5 @@
 import React from 'react';
+import { AlertCircle } from 'lucide-react';
 
 export interface InputProps {
   label: string;
@@ -52,8 +53,9 @@ export const Input: React.FC<InputProps> = ({
         required={required}
       />
       {error && (
-        <span className="text-xs text-[var(--vscode-inputValidation-errorForeground,var(--vscode-errorForeground))] -mt-0.5 leading-snug flex items-start gap-1 before:content-['⚠'] before:flex-shrink-0">
-          {error}
+        <span className="text-xs text-[var(--vscode-inputValidation-errorForeground,var(--vscode-errorForeground))] -mt-0.5 leading-snug flex items-start gap-1">
+          <AlertCircle size={12} strokeWidth={2.4} className="flex-shrink-0" />
+          <span>{error}</span>
         </span>
       )}
     </div>

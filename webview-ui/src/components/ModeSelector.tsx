@@ -1,4 +1,5 @@
-import React, { useState, useRef, useEffect } from "react";
+﻿import React, { useState, useRef, useEffect } from "react";
+import { Bug, Check, Code2, MessageCircleQuestion, PanelsTopLeft } from "lucide-react";
 import type { WorkMode } from "../types/messages";
 
 interface ModeSelectorProps {
@@ -10,7 +11,7 @@ interface ModeOption {
   id: WorkMode;
   name: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
 }
 
 /**
@@ -29,26 +30,26 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
     {
       id: "architect",
       name: "Architect",
-      description: "架构设计和规划",
-      icon: "🏗️",
+      description: "Architecture design and planning",
+      icon: <PanelsTopLeft size={16} strokeWidth={1.75} />,
     },
     {
       id: "code",
       name: "Code",
-      description: "代码编写和重构",
-      icon: "💻",
+      description: "Coding and refactoring",
+      icon: <Code2 size={16} strokeWidth={1.75} />,
     },
     {
       id: "ask",
       name: "Ask",
-      description: "解释和文档",
-      icon: "❓",
+      description: "Explanations and documents",
+      icon: <MessageCircleQuestion size={16} strokeWidth={1.75} />,
     },
     {
       id: "debug",
       name: "Debug",
-      description: "调试和问题诊断",
-      icon: "🪲",
+      description: "Debugging and issue diagnosis",
+      icon: <Bug size={16} strokeWidth={1.75} />,
     },
   ];
 
@@ -95,30 +96,21 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   }, [isOpen]);
 
   return (
-    <div className="relative inline-block w-full" ref={dropdownRef}>
+    <div className="relative inline-flex" ref={dropdownRef}>
       <button
-        className="w-full flex items-center gap-2 px-3 py-2 border border-[var(--vscode-input-border)] rounded bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] cursor-pointer transition-all outline-none hover:bg-[var(--vscode-list-hoverBackground)] hover:border-[var(--vscode-focusBorder)] focus:border-[var(--vscode-focusBorder)] focus:shadow-[0_0_0_1px_var(--vscode-focusBorder)]"
+        className="inline-flex h-9 w-9 items-center justify-center rounded-md bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] cursor-pointer transition-all outline-none hover:bg-[var(--vscode-list-hoverBackground)] focus:shadow-[0_0_0_1px_var(--vscode-focusBorder)]"
         onClick={toggleDropdown}
-        aria-label="Select work mode"
+        aria-label={`Select work mode (current: ${currentModeOption.name})`}
         aria-expanded={isOpen}
+        title={`${currentModeOption.name} mode`}
       >
-        <span className="text-lg leading-none flex-shrink-0">
+        <span className="text-[15px] leading-none flex-shrink-0 text-(--vscode-foreground)">
           {currentModeOption.icon}
-        </span>
-        <span className="flex-1 text-left font-medium">
-          {currentModeOption.name}
-        </span>
-        <span
-          className={`text-[10px] flex-shrink-0 text-[var(--vscode-descriptionForeground)] transition-transform ${
-            isOpen ? "rotate-180" : ""
-          }`}
-        >
-          ▼
         </span>
       </button>
 
       {isOpen && (
-        <div className="absolute top-[calc(100%+4px)] left-0 right-0 z-[1000] bg-[var(--vscode-dropdown-background)] border border-[var(--vscode-dropdown-border)] rounded shadow-[var(--vscode-widget-shadow)] overflow-hidden animate-[slideDown_0.15s_ease-out]">
+        <div className="absolute top-[calc(100%+6px)] left-0 z-[1000] min-w-[240px] max-w-[280px] bg-[var(--vscode-dropdown-background)] rounded shadow-[var(--vscode-widget-shadow)] overflow-hidden animate-[slideDown_0.15s_ease-out]">
           {modes.map((mode) => (
             <button
               key={mode.id}
@@ -130,7 +122,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
               onClick={() => handleModeSelect(mode.id)}
               aria-label={`Switch to ${mode.name} mode`}
             >
-              <span className="text-xl leading-none flex-shrink-0 max-[400px]:text-lg">
+              <span className="text-base leading-none flex-shrink-0 max-[400px]:text-sm text-(--vscode-foreground)">
                 {mode.icon}
               </span>
               <div className="flex-1 flex flex-col gap-0.5 min-w-0">
@@ -146,9 +138,11 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
                 </span>
               </div>
               {mode.id === currentMode && (
-                <span className="text-sm text-[var(--vscode-list-activeSelectionForeground)] flex-shrink-0">
-                  ✓
-                </span>
+                <Check
+                  size={14}
+                  className="text-[var(--vscode-list-activeSelectionForeground)] flex-shrink-0"
+                  strokeWidth={2.2}
+                />
               )}
             </button>
           ))}

@@ -26,6 +26,16 @@ export type HistoryItem = {
 export type OpenAIHistoryItem =
   OpenAI.Chat.Completions.ChatCompletionMessageParam[];
 
+export type TokenUsage = {
+  promptTokens: number;
+  completionTokens: number;
+  totalTokens: number;
+};
+
+export type ChatStreamEvent =
+  | { type: "content"; content: string }
+  | { type: "usage"; usage: TokenUsage };
+
 /**
  * API Handler for communicating with LLM service
  */
@@ -39,7 +49,10 @@ export class ApiHandler {
    * @returns AsyncGenerator yielding message chunks
    * @throws Error if API call fails (Requirements 12.1, 12.4)
    */
-  async *createMessage(systemPrompt: string, messages: OpenAIHistoryItem) {
+  async *createMessage(
+    systemPrompt: string,
+    messages: OpenAIHistoryItem
+  ): AsyncGenerator<ChatStreamEvent> {
     try {
       const client = new OpenAI({
         baseURL: this.apiConfiguration.baseUrl,
@@ -53,15 +66,31 @@ export class ApiHandler {
           model: this.apiConfiguration.model,
           temperature: this.apiConfiguration.temperature,
           max_tokens: this.apiConfiguration.maxTokens,
+          stream_options: { include_usage: true },
         };
 
       const { data: completion } = await client.chat.completions
         .create(request)
         .withResponse();
 
+      let usageSent = false;
+
       for await (const chunk of completion) {
-        if (chunk.choices[0].delta.content) {
-          yield chunk.choices[0].delta.content;
+        const content = chunk.choices?.[0]?.delta?.content;
+        if (content) {
+          yield { type: "content", content };
+        }
+
+        if (chunk.usage && !usageSent) {
+          usageSent = true;
+          yield {
+            type: "usage",
+            usage: {
+              promptTokens: chunk.usage.prompt_tokens ?? 0,
+              completionTokens: chunk.usage.completion_tokens ?? 0,
+              totalTokens: chunk.usage.total_tokens ?? 0,
+            },
+          };
         }
       }
     } catch (error) {

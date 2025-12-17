@@ -1,10 +1,12 @@
 import React, { useEffect, useState } from "react";
+import { History, MessageSquare, Plus, Trash2, X } from "lucide-react";
 import type { ConversationSummary } from "../types/messages";
 
 interface ConversationListProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   vscode: any;
   onConversationSwitch?: () => void;
+  className?: string;
 }
 
 /**
@@ -13,9 +15,11 @@ interface ConversationListProps {
 export const ConversationList: React.FC<ConversationListProps> = ({
   vscode,
   onConversationSwitch,
+  className,
 }) => {
   const [conversations, setConversations] = useState<ConversationSummary[]>([]);
   const [isExpanded, setIsExpanded] = useState(false);
+  const containerClassName = className ? `${className} ` : "";
 
   useEffect(() => {
     // Listen for conversation list updates
@@ -91,23 +95,33 @@ export const ConversationList: React.FC<ConversationListProps> = ({
 
   if (!isExpanded) {
     return (
-      <div className="p-2 border-b border-[var(--vscode-panel-border)]">
+      <div
+        className={`${containerClassName}p-2 bg-[var(--vscode-sideBar-background)] rounded-sm`}
+      >
         <button
           className="w-full bg-[var(--vscode-button-background)] text-[var(--vscode-button-foreground)] border-none px-3 py-2 rounded cursor-pointer text-sm transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"
           onClick={handleToggleList}
           title="查看会话历史"
         >
-          💬 会话历史 ({conversations.length})
+          <span className="inline-flex items-center justify-center gap-2">
+            <MessageSquare size={16} strokeWidth={2} />
+            <span>会话历史 ({conversations.length})</span>
+          </span>
         </button>
       </div>
     );
   }
 
   return (
-    <div className="border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBar-background)] max-h-[40vh] flex flex-col">
-      <div className="flex justify-between items-center p-3 border-b border-[var(--vscode-panel-border)] bg-[var(--vscode-sideBarSectionHeader-background)]">
+    <div
+      className={`${containerClassName} bg-[var(--vscode-sideBar-background)] rounded-sm max-h-[36vh] flex flex-col`}
+    >
+      <div className="flex justify-between items-center px-3 py-2.5 bg-[var(--vscode-sideBarSectionHeader-background)]">
         <h3 className="m-0 text-sm font-semibold text-[var(--vscode-sideBarTitle-foreground)]">
-          会话历史
+          <span className="inline-flex items-center gap-2">
+            <History size={16} strokeWidth={2} />
+            <span>会话历史</span>
+          </span>
         </h3>
         <div className="flex gap-2">
           <button
@@ -115,14 +129,17 @@ export const ConversationList: React.FC<ConversationListProps> = ({
             onClick={handleNewConversation}
             title="新建会话"
           >
-            ➕ 新建
+            <span className="inline-flex items-center gap-1.5">
+              <Plus size={14} strokeWidth={2.4} />
+              <span>新建</span>
+            </span>
           </button>
           <button
             className="bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] border-none px-2.5 py-1 rounded cursor-pointer text-xs transition-colors hover:bg-[var(--vscode-button-secondaryHoverBackground)]"
             onClick={() => setIsExpanded(false)}
             title="收起"
           >
-            ✕
+            <X size={14} strokeWidth={2.2} />
           </button>
         </div>
       </div>
@@ -169,7 +186,7 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                       title="删除会话"
                       type="button"
                     >
-                      ❌
+                      <Trash2 size={16} strokeWidth={2.2} />
                     </button>
                   </div>
                 </div>

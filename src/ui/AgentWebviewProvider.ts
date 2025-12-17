@@ -17,7 +17,10 @@ import {
 import { ModeManager, WorkMode } from "../managers/ModeManager";
 import { PromptBuilder } from "../managers/PromptBuilder";
 import { PermissionManager } from "../managers/PermissionManager";
-import { ContextCollector } from "../managers/ContextCollector";
+import {
+  ContextCollector,
+  ContextSnapshot,
+} from "../managers/ContextCollector";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { ErrorHandler } from "../managers/ErrorHandler";
@@ -59,6 +62,7 @@ export type WebviewMessage =
   | { type: "configuration_exported"; data: string; filename: string }
   | { type: "configuration_imported"; success: boolean; error?: string }
   | { type: "validation_error"; errors: Record<string, string> }
+  | { type: "context_snapshot"; context: ContextSnapshot }
   | { type: "permission_request"; request: PermissionRequest }
   | { type: "set_input_value"; value: string };
 
@@ -331,7 +335,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     // Handle user messages
     if (message.type === "user_message") {
-      const { maxLoopCount } =
+      const { maxLoopCount, contextWindowSize } =
         await this.configurationManager.getConfiguration();
 
       this.currentTask = new Task(
@@ -343,7 +347,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         this.promptBuilder,
         this.contextCollector,
         this.conversationHistoryManager,
-        this.errorHandler
+        this.errorHandler,
+        contextWindowSize
       );
       await this.currentTask.start();
     }

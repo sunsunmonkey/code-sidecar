@@ -1,4 +1,5 @@
 import React from 'react';
+import { Check, X } from 'lucide-react';
 import { Button } from '../common/Button';
 
 export interface ConfigActionsProps {
@@ -53,7 +54,7 @@ export const ConfigActions: React.FC<ConfigActionsProps> = ({
         }`}>
           {testResult.success ? (
             <>
-              <span className="font-bold text-base flex-shrink-0">✓</span>
+              <Check size={16} strokeWidth={2.4} className="flex-shrink-0" />
               <span className="flex-1 break-words">
                 Connection successful
                 {testResult.responseTime && ` (${testResult.responseTime}ms)`}
@@ -61,7 +62,7 @@ export const ConfigActions: React.FC<ConfigActionsProps> = ({
             </>
           ) : (
             <>
-              <span className="font-bold text-base flex-shrink-0">✗</span>
+              <X size={16} strokeWidth={2.4} className="flex-shrink-0" />
               <span className="flex-1 break-words">{testResult.error || 'Connection failed'}</span>
             </>
           )}

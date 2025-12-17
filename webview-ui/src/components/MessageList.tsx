@@ -1,4 +1,5 @@
 import React, { useEffect, useRef } from "react";
+import { MessageSquare } from "lucide-react";
 import { Message } from "./Message";
 import type { DisplayMessage } from "../types/messages";
 
@@ -30,7 +31,9 @@ export const MessageList: React.FC<MessageListProps> = ({
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center text-[var(--vscode-descriptionForeground)]">
-          <div className="text-5xl mb-4">💬</div>
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)] mb-3">
+            <MessageSquare size={28} strokeWidth={1.75} />
+          </div>
           <h3 className="m-0 mb-2 text-[var(--vscode-foreground)] text-lg font-semibold">
             No messages yet
           </h3>
@@ -44,7 +47,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   console.log(messages);
   return (
     <div
-      className="flex-1 overflow-y-auto p-4 flex flex-col"
+      className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col"
       ref={containerRef}
     >
       {messages.map((message) => (

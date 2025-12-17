@@ -3,15 +3,20 @@ import {
   ApiHandler,
   HistoryItem,
   OpenAIHistoryItem,
+  TokenUsage,
 } from "./apiHandler";
 import { AgentWebviewProvider } from "../ui/AgentWebviewProvider";
 import { ToolExecutor } from "../tools";
 import { PromptBuilder } from "../managers/PromptBuilder";
 import { XMLParser } from "fast-xml-parser";
-import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
+import {
+  ContextCollector,
+  ContextItem,
+  ContextSnapshot,
+  ProjectContext,
+} from "../managers/ContextCollector";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
 import { ConversationHistoryManager } from "../managers";
-import { ConfigurationManager } from "../config/ConfigurationManager";
 
 /**
  * Text content in assistant message
@@ -60,6 +65,9 @@ export class Task {
   private context?: ProjectContext;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
+  private contextWindowTokens: number;
+  private contextSnapshot?: ContextSnapshot;
+  private reservedOutputTokens: number = 0;
 
   constructor(
     private provider: AgentWebviewProvider,
@@ -70,7 +78,8 @@ export class Task {
     promptBuilder: PromptBuilder,
     contextCollector: ContextCollector,
     conversationHistoryManager: ConversationHistoryManager,
-    errorHandler: ErrorHandler
+    errorHandler: ErrorHandler,
+    contextWindowTokens: number
   ) {
     this.id = `task-${Date.now()}-${Math.random()
       .toString(36)
@@ -81,6 +90,7 @@ export class Task {
     this.contextCollector = contextCollector;
     this.conversationHistoryManager = conversationHistoryManager;
     this.errorHandler = errorHandler;
+    this.contextWindowTokens = contextWindowTokens || 8000;
   }
 
   /**
@@ -92,10 +102,31 @@ export class Task {
       console.log(`[Task ${this.id}] Collecting project context...`);
       this.context = await this.contextCollector.collectContext();
 
+      const systemPrompt = await this.getSystemPrompt();
+      const contextItems = await this.contextCollector.collectContextItems(
+        this.message,
+        this.context
+      );
+
+      const budgetedContext = this.contextCollector.budgetContextItems({
+        items: contextItems,
+        userMessage: this.message,
+        systemPrompt,
+        contextWindowTokens: this.contextWindowTokens,
+      });
+      this.contextSnapshot = budgetedContext.snapshot;
+      this.reservedOutputTokens = budgetedContext.reservedOutputTokens;
+
+      // Surface context usage to the webview for visibility
+      this.provider.postMessageToWebview({
+        type: "context_snapshot",
+        context: budgetedContext.snapshot,
+      });
+
       // Format user message with context
       const messageWithContext = this.formatUserMessageWithContext(
         this.message,
-        this.context
+        budgetedContext.selectedItems
       );
 
       const userMessage: HistoryItem = {
@@ -125,19 +156,19 @@ export class Task {
    */
   private formatUserMessageWithContext(
     message: string,
-    context: ProjectContext
+    contextItems: ContextItem[]
   ): string {
     const parts: string[] = [];
 
-    // Add context information
-    // TODO 这块是不是提到 system prompt 合适一点，看看 cline 怎么做的
-    const contextStr = this.contextCollector.formatContext(context);
-    if (contextStr) {
-      parts.push("\n# Project Context");
-      parts.push(contextStr);
+    if (contextItems.length > 0) {
+      parts.push("# Project Context");
+      for (const item of contextItems) {
+        const header = `### ${item.title} [${item.kind}]${item.appliedTruncation ? ` (${item.appliedTruncation})` : ""}`;
+        parts.push(header);
+        parts.push(item.content);
+      }
     }
 
-    // Add user message first
     parts.push("# User Request");
     parts.push(message);
 
@@ -183,13 +214,18 @@ export class Task {
       );
 
       let assistantMessage = "";
+      let usage: TokenUsage | undefined;
       for await (const chunk of stream) {
-        assistantMessage += chunk;
-        this.provider.postMessageToWebview({
-          type: "stream_chunk",
-          content: chunk,
-          isStreaming: true,
-        });
+        if (chunk.type === "content") {
+          assistantMessage += chunk.content;
+          this.provider.postMessageToWebview({
+            type: "stream_chunk",
+            content: chunk.content,
+            isStreaming: true,
+          });
+        } else if (chunk.type === "usage") {
+          usage = chunk.usage;
+        }
       }
 
       // completely stream
@@ -198,6 +234,9 @@ export class Task {
         content: "",
         isStreaming: false,
       });
+      if (usage) {
+        this.updateContextUsage(usage);
+      }
 
       console.log(
         `[Task ${this.id}] Loop ${this.loopCount}: Assistant response received`
@@ -462,6 +501,46 @@ export class Task {
    */
   public getErrorHandler(): ErrorHandler {
     return this.errorHandler;
+  }
+
+  /**
+   * Update context snapshot with real token usage from OpenAI
+   */
+  private updateContextUsage(usage: TokenUsage): void {
+    if (!this.contextSnapshot) {
+      return;
+    }
+
+    const promptTokens = usage.promptTokens || usage.totalTokens;
+    if (!promptTokens) {
+      return;
+    }
+
+    const inputBudget = Math.max(
+      this.contextWindowTokens - this.reservedOutputTokens,
+      0
+    );
+
+    const updatedSnapshot: ContextSnapshot = {
+      ...this.contextSnapshot,
+      totalTokens: promptTokens,
+      budgetTokens: inputBudget,
+      inputBudget,
+      reservedOutputTokens: this.reservedOutputTokens,
+      userMessageTokens:
+        this.contextSnapshot.userMessageTokens > 0
+          ? this.contextSnapshot.userMessageTokens
+          : Math.max(
+              promptTokens - this.contextSnapshot.systemPromptTokens,
+              0
+            ),
+    };
+
+    this.contextSnapshot = updatedSnapshot;
+    this.provider.postMessageToWebview({
+      type: "context_snapshot",
+      context: updatedSnapshot,
+    });
   }
 
   /**
