@@ -9,10 +9,7 @@ import { AgentWebviewProvider } from "../ui/AgentWebviewProvider";
 import { ToolExecutor } from "../tools";
 import { PromptBuilder } from "../managers/PromptBuilder";
 import { XMLParser } from "fast-xml-parser";
-import {
-  ContextCollector,
-  ProjectContext,
-} from "../managers/ContextCollector";
+import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
 import { ConversationHistoryManager } from "../managers";
 
@@ -98,15 +95,7 @@ export class Task {
       console.log(`[Task ${this.id}] Collecting project context...`);
       const context = await this.contextCollector.collectContext();
       this.context = context;
-      const formattedContext = this.contextCollector.formatContext(
-        context
-      );
-      this.publishTokenUsage({
-        promptTokens: 0,
-        completionTokens: 0,
-        totalTokens: 0,
-      });
-
+      const formattedContext = this.contextCollector.formatContext(context);
       // Format user message with context
       const messageWithContext = this.formatUserMessageWithContext(
         this.message,
@@ -214,6 +203,7 @@ export class Task {
         content: "",
         isStreaming: false,
       });
+
       if (usage) {
         this.publishTokenUsage(usage);
       }

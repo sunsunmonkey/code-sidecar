@@ -73,16 +73,14 @@ export class ApiHandler {
         .create(request)
         .withResponse();
 
-      let usageSent = false;
-
       for await (const chunk of completion) {
         const content = chunk.choices?.[0]?.delta?.content;
+
         if (content) {
           yield { type: "content", content };
         }
 
-        if (chunk.usage && !usageSent) {
-          usageSent = true;
+        if (chunk.usage) {
           yield {
             type: "usage",
             usage: {
