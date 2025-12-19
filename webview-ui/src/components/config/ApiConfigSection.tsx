@@ -17,14 +17,12 @@ export interface ApiConfigSectionProps {
     temperature?: string;
     maxTokens?: string;
   };
-  isFirstTime?: boolean;
 }
 
 export const ApiConfigSection: React.FC<ApiConfigSectionProps> = ({
   config,
   onChange,
   errors = {},
-  isFirstTime = false,
 }) => {
   // Real-time validation handlers
   const handleBaseUrlChange = (value: string) => {
@@ -54,59 +52,58 @@ export const ApiConfigSection: React.FC<ApiConfigSectionProps> = ({
   };
 
   return (
-    <section className={`p-5 rounded-xl bg-[var(--vscode-editor-background)] shadow-[0_10px_30px_rgba(0,0,0,0.18)] transition-all ${
-      isFirstTime ? 'shadow-[0_14px_38px_rgba(60,158,255,0.22)]' : ''
-    }`}>
-      <h2 className="text-base font-semibold text-[var(--vscode-foreground)] m-0 mb-3">
-        API Settings {isFirstTime && <span className="text-xs text-[var(--vscode-errorForeground)] font-normal ml-2">*Required</span>}
-      </h2>
-      <Input
-        label={`Base URL${isFirstTime ? ' *' : ''}`}
-        value={config.baseUrl}
-        onChange={handleBaseUrlChange}
-        error={errors.baseUrl}
-        placeholder="https://api.openai.com/v1"
-        type="text"
-        required={isFirstTime}
-      />
-      <Input
-        label={`Model Name${isFirstTime ? ' *' : ''}`}
-        value={config.model}
-        onChange={handleModelChange}
-        error={errors.model}
-        placeholder="gpt-4"
-        type="text"
-        required={isFirstTime}
-      />
-      <Input
-        label={`API Key${isFirstTime ? ' *' : ''}`}
-        type="password"
-        value={config.apiKey}
-        onChange={handleApiKeyChange}
-        error={errors.apiKey}
-        placeholder="sk-..."
-        required={isFirstTime}
-      />
-      <Input
-        label="Temperature"
-        type="number"
-        value={config.temperature}
-        onChange={handleTemperatureChange}
-        error={errors.temperature}
-        min={0}
-        max={2}
-        step={0.1}
-        placeholder="0.7"
-      />
-      <Input
-        label="Max Tokens"
-        type="number"
-        value={config.maxTokens}
-        onChange={handleMaxTokensChange}
-        error={errors.maxTokens}
-        min={1}
-        placeholder="4096"
-      />
+    <section className="relative overflow-hidden rounded-2xl bg-[var(--vscode-editor-background)] px-5 md:px-6 py-5 shadow-[0_8px_22px_rgba(0,0,0,0.12)] transition-all">
+      <div className="relative">
+        <div className="flex items-center gap-2 mb-3">
+          <h2 className="text-base font-semibold text-[var(--vscode-foreground)] m-0">
+            API Settings
+          </h2>
+        </div>
+        <Input
+          label="Base URL"
+          value={config.baseUrl}
+          onChange={handleBaseUrlChange}
+          error={errors.baseUrl}
+          placeholder="https://api.openai.com/v1"
+          type="text"
+        />
+        <Input
+          label="Model Name"
+          value={config.model}
+          onChange={handleModelChange}
+          error={errors.model}
+          placeholder="gpt-4"
+          type="text"
+        />
+        <Input
+          label="API Key"
+          type="password"
+          value={config.apiKey}
+          onChange={handleApiKeyChange}
+          error={errors.apiKey}
+          placeholder="sk-..."
+        />
+        <Input
+          label="Temperature"
+          type="number"
+          value={config.temperature}
+          onChange={handleTemperatureChange}
+          error={errors.temperature}
+          min={0}
+          max={2}
+          step={0.1}
+          placeholder="0.7"
+        />
+        <Input
+          label="Max Tokens"
+          type="number"
+          value={config.maxTokens}
+          onChange={handleMaxTokensChange}
+          error={errors.maxTokens}
+          min={1}
+          placeholder="4096"
+        />
+      </div>
     </section>
   );
 };

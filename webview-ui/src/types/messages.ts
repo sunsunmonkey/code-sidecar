@@ -84,7 +84,6 @@ export type ConfigResponse =
   | {
       type: "configuration_loaded";
       config: UIConfiguration;
-      isFirstTime?: boolean;
     }
   | { type: "configuration_saved"; success: boolean; error?: string }
   | {

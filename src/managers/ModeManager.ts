@@ -100,12 +100,12 @@ You are operating in **Code Mode**. Your primary focus is on:
       maxFileEdits: undefined, // No limit
     });
 
-    // ❓ Ask Mode - Explanation and documentation
+    // 💬 Ask Mode - Explanation and documentation
     this.modes.set("ask", {
       id: "ask",
       name: "Ask",
       description: "解释和文档",
-      icon: "❓",
+      icon: "💬",
       systemPromptFragment: `
 # Ask Mode
 
@@ -132,12 +132,12 @@ You are operating in **Ask Mode**. Your primary focus is on:
       maxFileEdits: 0,
     });
 
-    // 🪲 Debug Mode - Debugging and problem diagnosis
+    // 🐞 Debug Mode - Debugging and problem diagnosis
     this.modes.set("debug", {
       id: "debug",
       name: "Debug",
       description: "调试和问题诊断",
-      icon: "🪲",
+      icon: "🐞",
       systemPromptFragment: `
 # Debug Mode
 

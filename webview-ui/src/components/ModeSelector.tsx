@@ -1,5 +1,5 @@
 ﻿import React, { useState, useRef, useEffect } from "react";
-import { Bug, Check, Code2, MessageCircleQuestion, PanelsTopLeft } from "lucide-react";
+import { Check } from "lucide-react";
 import type { WorkMode } from "../types/messages";
 
 interface ModeSelectorProps {
@@ -31,25 +31,25 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
       id: "architect",
       name: "Architect",
       description: "Architecture design and planning",
-      icon: <PanelsTopLeft size={16} strokeWidth={1.75} />,
+      icon: "🏗️",
     },
     {
       id: "code",
       name: "Code",
       description: "Coding and refactoring",
-      icon: <Code2 size={16} strokeWidth={1.75} />,
+      icon: "💻",
     },
     {
       id: "ask",
       name: "Ask",
       description: "Explanations and documents",
-      icon: <MessageCircleQuestion size={16} strokeWidth={1.75} />,
+      icon: "💬",
     },
     {
       id: "debug",
       name: "Debug",
       description: "Debugging and issue diagnosis",
-      icon: <Bug size={16} strokeWidth={1.75} />,
+      icon: "🐞",
     },
   ];
 
@@ -98,7 +98,7 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
   return (
     <div className="relative inline-flex" ref={dropdownRef}>
       <button
-        className="inline-flex h-8 w-8 items-center justify-center rounded-md bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] cursor-pointer transition-all outline-none hover:bg-[var(--vscode-list-hoverBackground)] focus:shadow-[0_0_0_1px_var(--vscode-focusBorder)]"
+        className="inline-flex h-8 w-8 items-center justify-center rounded bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] cursor-pointer transition-colors outline-none hover:bg-[var(--vscode-button-secondaryHoverBackground)] focus:shadow-[0_0_0_1px_var(--vscode-focusBorder)]"
         onClick={toggleDropdown}
         aria-label={`Select work mode (current: ${currentModeOption.name})`}
         aria-expanded={isOpen}

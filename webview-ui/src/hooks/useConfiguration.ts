@@ -31,7 +31,6 @@ export interface UseConfigurationReturn {
   isSaving: boolean;
   isTesting: boolean;
   testResult: { success: boolean; error?: string; responseTime?: number } | null;
-  isFirstTime: boolean;
 
   // Actions
   updateConfig: (updates: Partial<UIConfiguration>) => void;
@@ -58,7 +57,6 @@ export function useConfiguration(): UseConfigurationReturn {
   const [isSaving, setIsSaving] = useState(false);
   const [isTesting, setIsTesting] = useState(false);
   const [testResult, setTestResult] = useState<{ success: boolean; error?: string; responseTime?: number } | null>(null);
-  const [isFirstTime, setIsFirstTime] = useState(false);
 
   /**
    * Validate a single field
@@ -247,7 +245,6 @@ export function useConfiguration(): UseConfigurationReturn {
       case 'configuration_loaded':
         setConfig(message.config);
         setIsLoading(false);
-        setIsFirstTime(message.isFirstTime || false);
         break;
 
       case 'configuration_saved':
@@ -294,7 +291,6 @@ export function useConfiguration(): UseConfigurationReturn {
     isSaving,
     isTesting,
     testResult,
-    isFirstTime,
 
     // Actions
     updateConfig,

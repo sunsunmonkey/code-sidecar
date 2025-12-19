@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+﻿import { useState, useCallback } from "react";
 import { MessageList } from "./components/MessageList";
 import { InputBox } from "./components/InputBox";
 import { ModeSelector } from "./components/ModeSelector";
@@ -94,7 +94,6 @@ function App() {
       case "token_usage":
         setTokenUsage(message.usage);
         break;
-
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -324,24 +323,25 @@ function App() {
     <>
       <div style={{ display: tab === "chat" ? "block" : "none" }}>
         <div className="flex flex-col h-screen w-full bg-[var(--vscode-sideBar-background)]">
-          <header className="flex items-center justify-between gap-3 px-4 py-2.5 bg-(--vscode-sideBarSectionHeader-background) shrink-0">
+          <header className="flex items-center justify-between gap-3 px-4 py-2.5 bg-[var(--vscode-sideBarSectionHeader-background)] shrink-0">
             <div className="flex items-center gap-3">
-              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-(--vscode-badge-background) text-(--vscode-badge-foreground)">
+              <div className="flex items-center justify-center w-9 h-9 rounded-md bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)]">
                 <Sparkles size={18} strokeWidth={2} />
               </div>
               <div className="flex flex-col leading-tight">
-                <span className="text-sm font-semibold text-(--vscode-foreground) uppercase tracking-wide">
+                <span className="text-sm font-semibold text-[var(--vscode-foreground)] uppercase tracking-wide">
                   Coding Agent
                 </span>
-                <span className="text-[12px] text-(--vscode-descriptionForeground)">
-                  Chat · Tasks · Context
+                <span className="text-[12px] text-[var(--vscode-descriptionForeground)]">
+                  Chat
                 </span>
               </div>
             </div>
             <div className="flex items-center gap-2">
               <ContextPanel usage={tokenUsage} />
+              <ConversationList vscode={vscode} variant="toolbar" />
               <button
-                className="bg-transparent text-(--vscode-button-foreground) px-2.5 py-1.5 cursor-pointer rounded-sm text-sm transition-colors hover:bg-(--vscode-button-hoverBackground)"
+                className="bg-transparent text-[var(--vscode-button-foreground)] px-2.5 py-1.5 cursor-pointer rounded-sm text-sm transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"
                 onClick={() => setTab("config")}
                 title="Open Configuration"
                 aria-label="Open configuration"
@@ -351,35 +351,29 @@ function App() {
             </div>
           </header>
 
-          <div className="flex-1 flex flex-col xl:flex-row gap-2 p-2 md:p-3 overflow-hidden">
-            <aside className="w-full xl:w-[260px] flex-shrink-0 flex flex-col gap-2 overflow-y-auto pr-0 xl:pr-1">
-              <ConversationList vscode={vscode} />
-            </aside>
+          <div className="flex-1 flex flex-col gap-2 p-2 md:p-3 overflow-hidden min-h-0">
+            <div className="flex-1 overflow-hidden rounded-lg bg-[var(--vscode-editor-background)] shadow-[0_8px_22px_rgba(0,0,0,0.18)] flex flex-col min-h-0">
+              <MessageList
+                messages={messages}
+                onPermissionResponse={handlePermissionResponse}
+              />
+            </div>
 
-            <div className="flex flex-col gap-2 overflow-hidden flex-1 min-h-0">
-              <div className="flex-1 overflow-hidden rounded-lg bg-[var(--vscode-editor-background)] shadow-[0_8px_22px_rgba(0,0,0,0.18)] flex flex-col min-h-0">
-                <MessageList
-                  messages={messages}
-                  onPermissionResponse={handlePermissionResponse}
-                />
-              </div>
-
-              <div className="rounded-lg bg-[var(--vscode-editor-background)] p-2 md:p-3 shadow-[0_6px_16px_rgba(0,0,0,0.16)]">
-                <InputBox
-                  onSend={sendMessage}
-                  onClear={clearConversation}
-                  disabled={isProcessing}
-                  inputValue={inputValue}
-                  setInputValue={setInputValue}
-                  className="flex-1 min-w-[260px]"
-                  modeSelector={
-                    <ModeSelector
-                      currentMode={currentMode}
-                      onModeChange={handleModeChange}
-                    />
-                  }
-                />
-              </div>
+            <div className="rounded-lg bg-[var(--vscode-editor-background)] p-2 md:p-3 shadow-[0_6px_16px_rgba(0,0,0,0.16)]">
+              <InputBox
+                onSend={sendMessage}
+                onClear={clearConversation}
+                disabled={isProcessing}
+                inputValue={inputValue}
+                setInputValue={setInputValue}
+                className="flex-1 min-w-[260px]"
+                modeSelector={
+                  <ModeSelector
+                    currentMode={currentMode}
+                    onModeChange={handleModeChange}
+                  />
+                }
+              />
             </div>
           </div>
         </div>
@@ -387,13 +381,13 @@ function App() {
 
       <div style={{ display: tab === "config" ? "block" : "none" }}>
         <div className="flex flex-col h-screen w-full">
-          <div className="flex items-center gap-3 p-3 bg-(--vscode-sideBar-background) shrink-0">
+          <div className="flex items-center gap-3 p-5 bg-[var(--vscode-sideBar-background)] shrink-0">
             <button
-              className="bg-transparent text-(--vscode-button-foreground) px-3 py-1 cursor-pointer rounded-sm text-sm transition-colors hover:bg-(--vscode-button-hoverBackground)"
+              type="button"
+              className="m-0 inline-flex items-center rounded-md bg-transparent px-2 py-1 text-base font-semibold text-[var(--vscode-button-foreground)] transition-colors cursor-pointer border-none hover:bg-[var(--vscode-button-hoverBackground)]"
               onClick={() => setTab("chat")}
-              title="Back to Chat"
             >
-              ← Back
+              {"< Back"}
             </button>
             <h2 className="m-0 text-base font-semibold">Configuration</h2>
           </div>

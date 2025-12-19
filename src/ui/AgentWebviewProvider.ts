@@ -55,7 +55,7 @@ export type WebviewMessage =
   | { type: "conversation_list"; conversations: any[] }
   | { type: "conversation_deleted"; conversationId: string }
   | { type: "navigate"; route: string }
-  | { type: "configuration_loaded"; config: any; isFirstTime?: boolean }
+  | { type: "configuration_loaded"; config: any }
   | { type: "configuration_saved"; success: boolean; error?: string }
   | {
       type: "connection_test_result";
@@ -729,12 +729,10 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private async handleGetConfiguration(): Promise<void> {
     try {
       const config = await this.configurationManager.getConfigurationForUI();
-      const isFirstTime = !(await this.configurationManager.isApiConfigured());
 
       this.postMessageToWebview({
         type: "configuration_loaded",
         config,
-        isFirstTime,
       });
     } catch (error) {
       const errorMessage =
