@@ -1,5 +1,6 @@
 import { OpenAI } from "openai";
-import { ToolResult, ToolUse } from "./task";
+import { ToolUse } from "./assistantMessage";
+import { ToolResult } from "./task";
 
 /**
  * API configuration for LLM service

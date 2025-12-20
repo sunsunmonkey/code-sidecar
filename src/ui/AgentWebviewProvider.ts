@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
-import { Task, ToolUse, ToolResult } from "../core/task";
+import { Task, ToolResult } from "../core/task";
+import { ToolUse } from "../core/assistantMessage";
 import { ApiConfiguration, HistoryItem } from "../core/apiHandler";
 import {
   ToolExecutor,

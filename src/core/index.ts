@@ -1,5 +1,11 @@
 /**
  * Core module exports
  */
-export { Task, ToolUse, ToolResult, TextContent, AssistantMessageContent } from './task';
-export { ApiHandler, ApiConfiguration, HistoryItem } from './apiHandler';
+export { Task, ToolResult } from "./task";
+export {
+  AssistantMessageContent,
+  AssistantMessageParser,
+  TextContent,
+  ToolUse,
+} from "./assistantMessage";
+export { ApiHandler, ApiConfiguration, HistoryItem } from "./apiHandler";

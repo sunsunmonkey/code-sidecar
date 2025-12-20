@@ -8,27 +8,14 @@ import {
 import { AgentWebviewProvider } from "../ui/AgentWebviewProvider";
 import { ToolExecutor } from "../tools";
 import { PromptBuilder } from "../managers/PromptBuilder";
-import { XMLParser } from "fast-xml-parser";
 import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
 import { ConversationHistoryManager } from "../managers";
-
-/**
- * Text content in assistant message
- */
-export type TextContent = {
-  type: "text";
-  content: string;
-};
-
-/**
- * Tool use request from assistant
- */
-export type ToolUse = {
-  type: "tool_use";
-  name: string;
-  params: Record<string, any>;
-};
+import {
+  AssistantMessageContent,
+  AssistantMessageParser,
+  ToolUse,
+} from "./assistantMessage";
 
 /**
  * Tool execution result
@@ -40,10 +27,7 @@ export type ToolResult = {
   is_error: boolean;
 };
 
-/**
- * Content types in assistant message
- */
-export type AssistantMessageContent = ToolUse | TextContent;
+export { AssistantMessageContent, AssistantMessageParser, ToolUse } from "./assistantMessage";
 
 /**
  * Task class manages the ReAct (Reasoning and Acting) loop
@@ -182,11 +166,13 @@ export class Task {
         history as OpenAIHistoryItem
       );
 
+      const parser = this.createAssistantMessageParser();
       let assistantMessage = "";
       let usage: TokenUsage | undefined;
       for await (const chunk of stream) {
         if (chunk.type === "content") {
           assistantMessage += chunk.content;
+          parser.processChunk(chunk.content);
           this.provider.postMessageToWebview({
             type: "stream_chunk",
             content: chunk.content,
@@ -196,6 +182,8 @@ export class Task {
           usage = chunk.usage;
         }
       }
+
+      parser.finalizeContentBlocks();
 
       // completely stream
       this.provider.postMessageToWebview({
@@ -223,7 +211,10 @@ export class Task {
       this.conversationHistoryManager.addMessage(assistantHistoryItem);
 
       // Parse assistant message for tool calls
-      const assistantContent = this.parseAssistantMessage(assistantMessage);
+      const assistantContent = this.buildAssistantContent(
+        parser.getContentBlocks(),
+        assistantMessage
+      );
       const toolCalls = assistantContent.filter(
         (content): content is ToolUse => content.type === "tool_use"
       );
@@ -300,67 +291,48 @@ export class Task {
   }
 
   /**
-   * Parse assistant message to extract text and tool calls
-   * Supports multiple tool calls in a single message
+   * Build parsed assistant content from the streaming parser,
+   * falling back to treating the response as plain text if needed.
    */
-  private parseAssistantMessage(
+  private buildAssistantContent(
+    parsedBlocks: AssistantMessageContent[],
     assistantMessage: string
   ): AssistantMessageContent[] {
-    const contents: AssistantMessageContent[] = [];
-
-    try {
-      const parser = new XMLParser({
-        ignoreAttributes: false,
-        parseTagValue: false,
-        trimValues: false,
-      });
-
-      // Try to parse XML tool calls
-      const parsed = parser.parse(assistantMessage);
-
-      // Extract all tool calls from parsed content
-      for (const key in parsed) {
-        if (typeof parsed[key] === "object" && parsed[key] !== null) {
-          // This is a potential tool call
-          contents.push({
-            type: "tool_use",
-            name: key,
-            params: parsed[key],
-          });
-        }
-      }
-
-      // If we found tool calls, also extract any text content
-      if (contents.length > 0) {
-        // Extract text that's not part of XML tags
-        // TODO 这块正则看起来有点问题
-        const textContent = assistantMessage
-          .replace(/<[^>]+>.*?<\/[^>]+>/gs, "")
-          .trim();
-        if (textContent) {
-          contents.unshift({
-            type: "text",
-            content: textContent,
-          });
-        }
-      }
-    } catch (error) {
-      // If parsing fails, treat entire message as text
-      console.log(
-        `[Task ${this.id}] XML parsing failed, treating as text:`,
-        error
-      );
+    if (parsedBlocks.length > 0) {
+      return parsedBlocks;
     }
 
-    // If no tool calls were found, return the entire message as text
-    if (contents.length === 0) {
-      contents.push({
+    return [
+      {
         type: "text",
-        content: assistantMessage,
-      });
+        content: assistantMessage.trim(),
+        partial: false,
+      },
+    ];
+  }
+
+  /**
+   * Create a streaming parser wired to the registered tool names and parameters.
+   */
+  private createAssistantMessageParser(): AssistantMessageParser {
+    const toolNames = this.toolExecutor.getToolNames();
+    const paramNames = this.getAllToolParameterNames(toolNames);
+    return new AssistantMessageParser(toolNames, paramNames);
+  }
+
+  private getAllToolParameterNames(toolNames: string[]): string[] {
+    const paramNames = new Set<string>();
+
+    for (const toolName of toolNames) {
+      const tool = this.toolExecutor.getTool(toolName);
+      if (tool?.parameters) {
+        for (const param of tool.parameters) {
+          paramNames.add(param.name);
+        }
+      }
     }
 
-    return contents;
+    return Array.from(paramNames);
   }
 
   /**

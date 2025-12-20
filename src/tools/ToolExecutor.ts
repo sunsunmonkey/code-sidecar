@@ -1,5 +1,6 @@
 import { Tool, ToolDefinition } from "./Tool";
-import { ToolUse, ToolResult } from "../core/task";
+import { ToolUse } from "../core/assistantMessage";
+import { ToolResult } from "../core/task";
 import {
   PermissionManager,
   PermissionRequest,

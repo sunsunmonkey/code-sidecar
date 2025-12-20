@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from "react";
+import React from "react";
 import { MessageSquare } from "lucide-react";
 import { Message } from "./Message";
 import type { DisplayMessage } from "../types/messages";
@@ -16,17 +16,6 @@ export const MessageList: React.FC<MessageListProps> = ({
   messages,
   onPermissionResponse,
 }) => {
-  const messagesEndRef = useRef<HTMLDivElement>(null);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // Auto-scroll to bottom when new messages arrive
-  // Requirement 4.2: Keep interface scrolled to latest content
-  useEffect(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: "smooth" });
-    }
-  }, [messages]);
-
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -46,10 +35,7 @@ export const MessageList: React.FC<MessageListProps> = ({
   }
   console.log(messages);
   return (
-    <div
-      className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col"
-      ref={containerRef}
-    >
+    <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col">
       {messages.map((message) => (
         <Message
           key={message.id}
@@ -57,7 +43,6 @@ export const MessageList: React.FC<MessageListProps> = ({
           onPermissionResponse={onPermissionResponse}
         />
       ))}
-      <div ref={messagesEndRef} />
     </div>
   );
 };
