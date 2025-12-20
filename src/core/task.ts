@@ -84,9 +84,7 @@ export class Task {
       // Collect context before starting
       console.log(`[Task ${this.id}] Collecting project context...`);
       const context = await this.contextCollector.collectContext();
-      if (this.isCancelled) {
-        return;
-      }
+
       this.context = context;
       const formattedContext = this.contextCollector.formatContext(context);
       // Format user message with context
@@ -112,10 +110,6 @@ export class Task {
       console.log("save", this.message);
       await this.recursivelyMakeRequest(this.history);
     } catch (error) {
-      // Handle errors at the top level
-      if (this.isCancelled) {
-        return;
-      }
       this.handleTaskError(error, "task_start");
     }
   }
@@ -166,9 +160,6 @@ export class Task {
 
       const apiHandler = new ApiHandler(this.apiConfiguration);
       const systemPrompt = await this.getSystemPrompt();
-      if (this.isCancelled) {
-        return;
-      }
 
       history = history.map((item) => {
         if (item.role === "tool_result") {
@@ -213,15 +204,6 @@ export class Task {
 
       parser.finalizeContentBlocks();
 
-      if (this.isCancelled) {
-        this.provider.postMessageToWebview({
-          type: "stream_chunk",
-          content: "",
-          isStreaming: false,
-        });
-        return;
-      }
-
       // completely stream
       this.provider.postMessageToWebview({
         type: "stream_chunk",
@@ -232,6 +214,7 @@ export class Task {
       if (usage) {
         this.publishTokenUsage(usage);
       }
+
       console.log(
         `[Task ${this.id}] Loop ${this.loopCount}: Assistant response received`
       );
@@ -283,15 +266,8 @@ export class Task {
       // Execute tool calls and get results
       const toolResults = await this.handleToolCalls(toolCalls);
 
-      if (this.isCancelled) {
-        return;
-      }
-
       // Add tool results to history as user messages
       for (const result of toolResults) {
-        if (this.isCancelled) {
-          break;
-        }
         this.history.push({
           role: "tool_result",
           content: result,
@@ -317,10 +293,6 @@ export class Task {
         this.conversationHistoryManager.updateMessages(messages);
       }
 
-      if (this.isCancelled) {
-        return;
-      }
-
       // If attempt_completion was called, end the ReAct loop
       if (hasCompletion) {
         console.log(
@@ -333,13 +305,6 @@ export class Task {
       // Continue the ReAct loop
       await this.recursivelyMakeRequest(this.history);
     } catch (error) {
-      // Handle errors in ReAct loop
-      if (this.isCancelled) {
-        console.log(
-          `[Task ${this.id}] Cancelled during loop ${this.loopCount}`
-        );
-        return;
-      }
       await this.handleTaskError(error, `react_loop_${this.loopCount}`);
     }
   }
@@ -414,10 +379,6 @@ export class Task {
 
       // Execute tool using ToolExecutor
       const result = await this.toolExecutor.executeTool(toolCall);
-
-      if (this.isCancelled) {
-        break;
-      }
 
       results.push(result);
     }
