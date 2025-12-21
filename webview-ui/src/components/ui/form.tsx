@@ -8,7 +8,7 @@ import {
   type FieldValues,
 } from "react-hook-form";
 import { Label } from "./label";
-import { cn } from "../../lib/utils";
+import { cn } from "../../utils/utils";
 import { AlertCircle } from "lucide-react";
 
 const Form = FormProvider;
