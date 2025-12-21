@@ -1,7 +1,10 @@
-import React from "react";
+import React, { useLayoutEffect, useRef } from "react";
 import { MessageSquare } from "lucide-react";
 import { Message } from "./Message";
 import type { DisplayMessage } from "coding-agent-shared/types/messages";
+
+const AUTO_SCROLL_THRESHOLD_PX = 32;
+const SCROLL_UP_THRESHOLD_PX = 2;
 
 interface MessageListProps {
   messages: DisplayMessage[];
@@ -16,6 +19,40 @@ export const MessageList: React.FC<MessageListProps> = ({
   messages,
   onPermissionResponse,
 }) => {
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const autoScrollEnabledRef = useRef(true);
+  const lastScrollTopRef = useRef(0);
+
+  useLayoutEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container || !autoScrollEnabledRef.current) {
+      return;
+    }
+
+    container.scrollTop = container.scrollHeight;
+    lastScrollTopRef.current = container.scrollTop;
+  }, [messages]);
+
+  const handleScroll = () => {
+    const container = scrollContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const { scrollTop, scrollHeight, clientHeight } = container;
+    const distanceFromBottom = scrollHeight - (scrollTop + clientHeight);
+    const isScrollingUp =
+      scrollTop < lastScrollTopRef.current - SCROLL_UP_THRESHOLD_PX;
+
+    if (isScrollingUp) {
+      autoScrollEnabledRef.current = false;
+    } else if (distanceFromBottom <= AUTO_SCROLL_THRESHOLD_PX) {
+      autoScrollEnabledRef.current = true;
+    }
+
+    lastScrollTopRef.current = scrollTop;
+  };
+
   if (messages.length === 0) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
@@ -35,7 +72,11 @@ export const MessageList: React.FC<MessageListProps> = ({
   }
   console.log(messages);
   return (
-    <div className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col">
+    <div
+      ref={scrollContainerRef}
+      onScroll={handleScroll}
+      className="flex-1 min-h-0 overflow-y-auto p-4 flex flex-col"
+    >
       {messages.map((message) => (
         <Message
           key={message.id}
