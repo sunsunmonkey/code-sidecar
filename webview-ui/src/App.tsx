@@ -349,7 +349,10 @@ function App() {
               <ConversationList
                 vscode={vscode}
                 variant="toolbar"
-                onConversationSwitch={() => setIsProcessing(false)}
+                onConversationSwitch={() => {
+                  setIsProcessing(false);
+                  setTokenUsage(null);
+                }}
               />
               <button
                 className="bg-transparent text-[var(--vscode-button-foreground)] px-2.5 py-1.5 cursor-pointer rounded-sm text-sm transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"

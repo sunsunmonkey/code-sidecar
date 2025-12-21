@@ -6,6 +6,10 @@ interface ContextPanelProps {
 }
 
 export const ContextPanel: React.FC<ContextPanelProps> = ({ usage }) => {
+  if (!usage) {
+    return null;
+  }
+
   const usedTokens = usage?.totalTokens ?? 0;
   const limitTokens = usage?.availableTokens ?? 0;
   const displayTotal = limitTokens > 0 ? limitTokens : usedTokens || 1;
