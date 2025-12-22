@@ -3,6 +3,7 @@ import type {
   PermissionRequest,
   PermissionRequestWithId,
 } from "coding-agent-shared/types/permissions";
+import { logger } from "coding-agent-shared/utils/logger";
 
 /**
  * Permission settings for tool operations
@@ -89,7 +90,7 @@ export class PermissionManager {
       case "read":
         // Requirement 5.3: Auto-approve reads if allowed by default
         if (this.settings.allowReadByDefault) {
-          console.log(
+          logger.debug(
             `[PermissionManager] Auto-approved read operation: ${request.target}`
           );
           return true;
@@ -100,7 +101,7 @@ export class PermissionManager {
       case "modify":
         // Requirement 5.4: Check write permission setting
         if (this.settings.allowWriteByDefault) {
-          console.log(
+          logger.debug(
             `[PermissionManager] Auto-approved write operation: ${request.target}`
           );
           return true;
@@ -109,7 +110,7 @@ export class PermissionManager {
 
       case "execute":
         if (this.settings.allowExecuteByDefault) {
-          console.log(
+          logger.debug(
             `[PermissionManager] Auto-approved execute operation: ${request.target}`
           );
           return true;
@@ -147,11 +148,11 @@ export class PermissionManager {
     const approved = result === "Allow";
 
     if (approved) {
-      console.log(
+      logger.debug(
         `[PermissionManager] User approved: ${request.toolName} - ${request.operation} on ${request.target}`
       );
     } else {
-      console.log(
+      logger.debug(
         `[PermissionManager] User denied: ${request.toolName} - ${request.operation} on ${request.target}`
       );
     }
@@ -188,7 +189,7 @@ export class PermissionManager {
       setTimeout(() => {
         if (this.pendingRequests.has(requestId)) {
           this.pendingRequests.delete(requestId);
-          console.log(
+          logger.debug(
             `[PermissionManager] Permission request ${requestId} timed out`
           );
           resolve(false);
@@ -222,7 +223,7 @@ export class PermissionManager {
       ...this.settings,
       ...settings,
     };
-    console.log("[PermissionManager] Settings updated:", this.settings);
+    logger.debug("[PermissionManager] Settings updated:", this.settings);
   }
 
   /**
@@ -243,6 +244,6 @@ export class PermissionManager {
       allowExecuteByDefault: false,
       alwaysConfirm: ["delete", "execute"],
     };
-    console.log("[PermissionManager] Settings reset to defaults");
-  }
+    logger.debug("[PermissionManager] Settings reset to defaults");
+}
 }

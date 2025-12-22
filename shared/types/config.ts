@@ -1,21 +1,26 @@
-export interface UIConfiguration {
-  api: {
-    baseUrl: string;
-    model: string;
-    apiKey: string;
-    temperature: number;
-    maxTokens: number;
-  };
-  permissions: {
-    allowReadByDefault: boolean;
-    allowWriteByDefault: boolean;
-    allowExecuteByDefault: boolean;
-    alwaysConfirm?: string[];
-  };
-  advanced: {
-    maxLoopCount: number;
-    contextWindowSize: number;
-  };
+import type { ApiConfiguration } from "./api";
+
+export type ApiConfigurationWithDefaults = ApiConfiguration & {
+  temperature: number;
+  maxTokens: number;
+};
+
+export interface PermissionSettings {
+  allowReadByDefault: boolean;
+  allowWriteByDefault: boolean;
+  allowExecuteByDefault: boolean;
+  alwaysConfirm?: string[];
+}
+
+export interface AdvancedConfiguration {
+  maxLoopCount: number;
+  contextWindowSize: number;
+}
+
+export interface AgentConfiguration {
+  api: ApiConfigurationWithDefaults;
+  permissions: PermissionSettings;
+  advanced: AdvancedConfiguration;
 }
 
 export interface ValidationErrors {

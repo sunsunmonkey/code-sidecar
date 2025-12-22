@@ -1,3 +1,5 @@
+import { logger } from "coding-agent-shared/utils/logger";
+
 /**
  * Error Handler for managing and recovering from various error types
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
@@ -376,7 +378,9 @@ export class ErrorHandler {
       const attempts = this.retryAttempts.get(operationKey) || 0;
 
       if (attempts < this.MAX_RETRY_ATTEMPTS) {
-        console.log(`[ErrorHandler] Attempting recovery for ${operationKey}, attempt ${attempts + 1}`);
+        logger.debug(
+          `[ErrorHandler] Attempting recovery for ${operationKey}, attempt ${attempts + 1}`
+        );
         return true; // Signal that retry should be attempted
       }
     }
@@ -409,7 +413,7 @@ export class ErrorHandler {
     }
 
     // Console logging for debugging
-    console.error(`[ErrorHandler] ${type}: ${message}`, context);
+    logger.debug(`[ErrorHandler] ${type}: ${message}`, context);
   }
 
   /**
@@ -445,7 +449,7 @@ export class ErrorHandler {
   clearErrorLog(): void {
     this.errorLog = [];
     this.retryAttempts.clear();
-    console.log('[ErrorHandler] Error log cleared');
+    logger.debug('[ErrorHandler] Error log cleared');
   }
 
   /**

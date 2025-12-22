@@ -1,8 +1,4 @@
 /**
  * Configuration module exports
  */
-export {
-  ConfigurationManager,
-  ExtensionConfiguration,
-  UIConfiguration,
-} from "./ConfigurationManager";
+export { ConfigurationManager } from "./ConfigurationManager";

@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { HistoryItem } from "../core/apiHandler";
+import { logger } from "coding-agent-shared/utils/logger";
 
 /**
  * Conversation history entry for persistence
@@ -94,7 +95,7 @@ export class ConversationHistoryManager {
     }
 
     this.startNewConversation();
-    console.log("[ConversationHistoryManager] Conversation cleared");
+    logger.debug("[ConversationHistoryManager] Conversation cleared");
   }
 
   /**
@@ -109,7 +110,7 @@ export class ConversationHistoryManager {
     const filteredHistory = history.filter((c) => c.id !== conversationId);
 
     if (filteredHistory.length === history.length) {
-      console.warn(
+      logger.debug(
         `[ConversationHistoryManager] Conversation not found: ${conversationId}`
       );
       return false;
@@ -120,7 +121,7 @@ export class ConversationHistoryManager {
       filteredHistory
     );
 
-    console.log(
+    logger.debug(
       `[ConversationHistoryManager] Deleted conversation: ${conversationId}`
     );
     return true;
@@ -191,11 +192,11 @@ export class ConversationHistoryManager {
         recentHistory
       );
 
-      console.log(
+      logger.debug(
         `[ConversationHistoryManager] Archived conversation: ${conversation.id} with ${conversation.messages.length} messages`
       );
     } catch (error) {
-      console.error(
+      logger.debug(
         "[ConversationHistoryManager] Failed to archive conversation:",
         error
       );
@@ -226,7 +227,7 @@ export class ConversationHistoryManager {
         timestamp: new Date(entry.timestamp),
       }));
     } catch (error) {
-      console.error(
+      logger.debug(
         "[ConversationHistoryManager] Failed to get conversation history:",
         error
       );
@@ -253,18 +254,18 @@ export class ConversationHistoryManager {
         this.currentConversation = conversation;
         this.saveCurrentConversation();
 
-        console.log(
+        logger.debug(
           `[ConversationHistoryManager] Restored conversation: ${conversationId}`
         );
         return true;
       }
 
-      console.warn(
+      logger.debug(
         `[ConversationHistoryManager] Conversation not found: ${conversationId}`
       );
       return false;
     } catch (error) {
-      console.error(
+      logger.debug(
         "[ConversationHistoryManager] Failed to restore conversation:",
         error
       );

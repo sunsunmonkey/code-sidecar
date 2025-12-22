@@ -1,6 +1,6 @@
 import type { ApiConfiguration } from "./api";
 import type { ConversationSummary, DisplayMessage } from "./conversation";
-import type { UIConfiguration, ValidationErrors } from "./config";
+import type { AgentConfiguration, ValidationErrors } from "./config";
 import type { WorkMode } from "./modes";
 import type { OperationRecord } from "./operations";
 import type { PermissionRequestWithId } from "./permissions";
@@ -8,7 +8,7 @@ import type { ToolResult, ToolUse } from "./tools";
 
 export type { ApiConfiguration } from "./api";
 export type { ConversationSummary, DisplayMessage, MessageRole } from "./conversation";
-export type { UIConfiguration, ValidationErrors } from "./config";
+export type { AgentConfiguration, ValidationErrors } from "./config";
 export type { WorkMode } from "./modes";
 export type { OperationRecord, OperationType } from "./operations";
 export type { PermissionRequest, PermissionRequestWithId } from "./permissions";
@@ -21,13 +21,13 @@ export interface TokenUsageSnapshot {
 
 export type ConfigMessage =
   | { type: "get_configuration" }
-  | { type: "save_configuration"; config: UIConfiguration }
+  | { type: "save_configuration"; config: AgentConfiguration }
   | { type: "test_connection"; apiConfig: ApiConfiguration };
 
 export type ConfigResponse =
   | {
       type: "configuration_loaded";
-      config: UIConfiguration;
+      config: AgentConfiguration;
     }
   | { type: "configuration_saved"; success: boolean; error?: string }
   | {
@@ -52,7 +52,7 @@ export type WebviewMessage =
   | { type: "conversation_list"; conversations: ConversationSummary[] }
   | { type: "conversation_deleted"; conversationId: string }
   | { type: "navigate"; route: string }
-  | { type: "configuration_loaded"; config: UIConfiguration }
+  | { type: "configuration_loaded"; config: AgentConfiguration }
   | { type: "configuration_saved"; success: boolean; error?: string }
   | {
       type: "connection_test_result";
@@ -80,6 +80,6 @@ export type UserMessage =
   | { type: "switch_conversation"; conversationId: string }
   | { type: "delete_conversation"; conversationId: string }
   | { type: "get_configuration" }
-  | { type: "save_configuration"; config: UIConfiguration }
+  | { type: "save_configuration"; config: AgentConfiguration }
   | { type: "test_connection"; apiConfig: ApiConfiguration }
   | { type: "permission_response"; requestId: string; approved: boolean };

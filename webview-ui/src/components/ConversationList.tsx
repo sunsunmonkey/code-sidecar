@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { History, MessageSquare, Plus, Trash2, X } from "lucide-react";
 import type { ConversationSummary } from "coding-agent-shared/types/messages";
+import { logger } from "coding-agent-shared/utils/logger";
 
 interface ConversationListProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -31,16 +32,16 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     const handleMessage = (event: MessageEvent) => {
       const message = event.data;
 
-      console.log("ConversationList received message:", message.type);
+      logger.debug("ConversationList received message:", message.type);
 
       if (message.type === "conversation_list") {
-        console.log(
+        logger.debug(
           "Updating conversation list:",
           message.conversations.length
         );
         setConversations(message.conversations);
       } else if (message.type === "conversation_deleted") {
-        console.log("Conversation deleted:", message.conversationId);
+        logger.debug("Conversation deleted:", message.conversationId);
         // Remove deleted conversation from list
         setConversations((prev) =>
           prev.filter((c) => c.id !== message.conversationId)
@@ -69,9 +70,9 @@ export const ConversationList: React.FC<ConversationListProps> = ({
   };
 
   const handleDeleteConversation = (conversationId: string) => {
-    console.log("Delete conversation clicked:", conversationId);
+    logger.debug("Delete conversation clicked:", conversationId);
 
-    console.log("Sending delete_conversation message:", conversationId);
+    logger.debug("Sending delete_conversation message:", conversationId);
     vscode.postMessage({ type: "delete_conversation", conversationId });
   };
 

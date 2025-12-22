@@ -1,6 +1,7 @@
 import { Tool, ToolDefinition } from "./Tool";
 import { PermissionManager } from "../managers/PermissionManager";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
+import { logger } from "coding-agent-shared/utils/logger";
 
 import type { ToolUse, ToolResult } from "coding-agent-shared/types/tools";
 import type { PermissionRequest } from "coding-agent-shared/types/messages";
@@ -28,11 +29,11 @@ export class ToolExecutor {
    */
   registerTool(tool: Tool): void {
     if (this.tools.has(tool.name)) {
-      console.warn(`Tool ${tool.name} is already registered. Overwriting.`);
+      logger.debug(`Tool ${tool.name} is already registered. Overwriting.`);
     }
     this.tools.set(tool.name, tool);
 
-    console.log(`Tool registered: ${tool.name}`);
+    logger.debug(`Tool registered: ${tool.name}`);
   }
 
   /**
@@ -71,7 +72,7 @@ export class ToolExecutor {
 
     // Handle unknown tool (Requirement 13.7)
     if (!tool) {
-      console.error(`Tool not found: ${toolUse.name}`);
+      logger.debug(`Tool not found: ${toolUse.name}`);
       return {
         type: "tool_result",
         tool_name: toolUse.name,
@@ -84,7 +85,7 @@ export class ToolExecutor {
 
     // Validate parameters (Requirement 13.7)
     if (!tool.validate(toolUse.params)) {
-      console.error(
+      logger.debug(
         `Invalid parameters for tool: ${toolUse.name}`,
         toolUse.params
       );
@@ -106,7 +107,7 @@ export class ToolExecutor {
       );
 
       if (!allowed) {
-        console.log(`Permission denied for tool: ${toolUse.name}`);
+        logger.debug(`Permission denied for tool: ${toolUse.name}`);
         return {
           type: "tool_result",
           tool_name: toolUse.name,
@@ -117,7 +118,7 @@ export class ToolExecutor {
     }
 
     try {
-      console.log(
+      logger.debug(
         `Executing tool: ${toolUse.name} with params:`,
         toolUse.params
       );
@@ -125,7 +126,7 @@ export class ToolExecutor {
       // Execute the tool (Requirements 13.1, 13.2, 13.3, 13.4, 13.5, 13.6)
       const result = await tool.execute(toolUse.params);
 
-      console.log(`Tool ${toolUse.name} executed successfully`);
+      logger.debug(`Tool ${toolUse.name} executed successfully`);
 
       return {
         type: "tool_result",
@@ -134,7 +135,7 @@ export class ToolExecutor {
         is_error: false,
       };
     } catch (error) {
-      console.error(`Tool execution error for ${toolUse.name}:`, error);
+      logger.debug(`Tool execution error for ${toolUse.name}:`, error);
 
       // Use error handler if available (Requirements 12.2, 12.3)
       if (this.errorHandler) {
@@ -302,6 +303,6 @@ export class ToolExecutor {
    */
   clearTools(): void {
     this.tools.clear();
-    console.log("All tools cleared");
-  }
+    logger.debug("All tools cleared");
+}
 }

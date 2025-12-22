@@ -1,4 +1,5 @@
 import type { WorkMode } from "coding-agent-shared/types/modes";
+import { logger } from "coding-agent-shared/utils/logger";
 
 /**
  * Mode definition interface
@@ -168,7 +169,7 @@ You are operating in **Debug Mode**. Your primary focus is on:
       throw new Error(`Unknown work mode: ${mode}`);
     }
     this.currentMode = mode;
-    console.log(`[ModeManager] Switched to ${mode} mode`);
+    logger.debug(`[ModeManager] Switched to ${mode} mode`);
   }
 
   /**
@@ -232,7 +233,7 @@ You are operating in **Debug Mode**. Your primary focus is on:
    */
   public registerMode(mode: ModeDefinition): void {
     this.modes.set(mode.id, mode);
-    console.log(`[ModeManager] Registered custom mode: ${mode.id}`);
+    logger.debug(`[ModeManager] Registered custom mode: ${mode.id}`);
   }
 
   /**

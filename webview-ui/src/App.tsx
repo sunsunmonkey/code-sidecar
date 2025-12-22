@@ -15,6 +15,7 @@ import type {
   PermissionRequestWithId,
 } from "coding-agent-shared/types/messages";
 import { vscode } from "./utils/vscode";
+import { logger } from "coding-agent-shared/utils/logger";
 import { useEvent } from "react-use";
 import { ContextPanel } from "./components/ContextPanel";
 
@@ -63,7 +64,7 @@ function App() {
       case "mode_changed":
         // Update current mode when extension confirms the change
         setCurrentMode(message.mode);
-        console.log("Mode changed to:", message.mode);
+        logger.debug("Mode changed to:", message.mode);
         break;
 
       case "conversation_cleared":
@@ -250,7 +251,7 @@ function App() {
   const handleConversationCleared = () => {
     setMessages([]);
     setIsProcessing(false);
-    console.log("Conversation cleared");
+    logger.debug("Conversation cleared");
   };
 
   /**

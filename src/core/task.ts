@@ -14,6 +14,7 @@ import {
   AssistantMessageContent,
   AssistantMessageParser,
 } from "./assistantMessage";
+import { logger } from "coding-agent-shared/utils/logger";
 
 import type { ApiConfiguration } from "coding-agent-shared/types/api";
 import type { ToolUse, ToolResult } from "coding-agent-shared/types/tools";
@@ -67,7 +68,7 @@ export class Task {
   async start() {
     try {
       // Collect context before starting
-      console.log(`[Task ${this.id}] Collecting project context...`);
+      logger.debug(`[Task ${this.id}] Collecting project context...`);
       const context = await this.contextCollector.collectContext();
 
       this.context = context;
@@ -92,7 +93,7 @@ export class Task {
         role: "user",
         content: this.message,
       });
-      console.log("save", this.message);
+      logger.debug("save", this.message);
       await this.recursivelyMakeRequest(this.history);
     } catch (error) {
       this.handleTaskError(error, "task_start");
@@ -125,7 +126,7 @@ export class Task {
   private async recursivelyMakeRequest(history: HistoryItem[]) {
     try {
       if (this.isCancelled) {
-        console.log(
+        logger.debug(
           `[Task ${this.id}] Cancelled before loop ${this.loopCount + 1}`
         );
         return;
@@ -200,7 +201,7 @@ export class Task {
         this.publishTokenUsage(usage);
       }
 
-      console.log(
+      logger.debug(
         `[Task ${this.id}] Loop ${this.loopCount}: Assistant response received`
       );
 
@@ -226,7 +227,7 @@ export class Task {
 
       // If no tool calls found, prompt LLM to use tools (Requirement 6.6)
       if (toolCalls.length === 0) {
-        console.log(
+        logger.debug(
           `[Task ${this.id}] No tool calls found, prompting to use tools`
         );
 
@@ -239,7 +240,7 @@ export class Task {
           await this.recursivelyMakeRequest(this.history);
         } else {
           // Empty response - end the loop
-          console.log(`[Task ${this.id}] Empty response, ending ReAct loop`);
+          logger.debug(`[Task ${this.id}] Empty response, ending ReAct loop`);
           this.provider.postMessageToWebview({ type: "task_complete" });
         }
         return;
@@ -280,7 +281,7 @@ export class Task {
 
       // If attempt_completion was called, end the ReAct loop
       if (hasCompletion) {
-        console.log(
+        logger.debug(
           `[Task ${this.id}] Task completion requested, ending ReAct loop`
         );
         this.provider.postMessageToWebview({ type: "task_complete" });
@@ -349,7 +350,7 @@ export class Task {
       if (this.isCancelled) {
         break;
       }
-      console.log(`[Task ${this.id}] Executing tool: ${toolCall.name}`);
+      logger.debug(`[Task ${this.id}] Executing tool: ${toolCall.name}`);
 
       this.provider.postMessageToWebview({
         type: "tool_call",
@@ -512,7 +513,7 @@ export class Task {
       );
 
       if (canRecover) {
-        console.log(`[Task ${this.id}] Attempting recovery for ${operation}`);
+        logger.debug(`[Task ${this.id}] Attempting recovery for ${operation}`);
 
         // For network errors, retry the request
         if (this.errorHandler.isRetryable(error)) {
@@ -536,7 +537,7 @@ export class Task {
     }
 
     // If no recovery or recovery failed, end the task
-    console.error(`[Task ${this.id}] Task failed due to error in ${operation}`);
+    logger.debug(`[Task ${this.id}] Task failed due to error in ${operation}`);
     this.provider.postMessageToWebview({ type: "task_complete" });
   }
 

@@ -1,34 +1,10 @@
 import * as vscode from "vscode";
 
 import { PermissionSettings } from "../managers/PermissionManager";
-import type { UIConfiguration } from "coding-agent-shared/types/config";
+import { logger } from "coding-agent-shared/utils/logger";
+
 import { ApiConfiguration } from "coding-agent-shared/types/api";
-/**
- * Complete plugin configuration
- */
-export interface ExtensionConfiguration {
-  /**
-   * API configuration
-   */
-  api: ApiConfiguration;
-
-  /**
-   * Permission settings
-   */
-  permissions: PermissionSettings;
-
-  /**
-   * Maximum ReAct loop iterations
-   */
-  maxLoopCount: number;
-
-  /**
-   * Maximum context window size
-   */
-  contextWindowSize: number;
-}
-
-export type { UIConfiguration } from "coding-agent-shared/types/config";
+import type { AgentConfiguration } from "coding-agent-shared/types/config";
 
 /**
  * ConfigurationManager handles reading, saving, and validating plugin configuration
@@ -61,9 +37,9 @@ export class ConfigurationManager {
   /**
    * Get complete plugin configuration
    *
-   * @returns Promise<ExtensionConfiguration> Complete configuration
+   * @returns Promise<AgentConfiguration> Complete configuration
    */
-  async getConfiguration(): Promise<ExtensionConfiguration> {
+  async getConfiguration(): Promise<AgentConfiguration> {
     const config = vscode.workspace.getConfiguration(
       ConfigurationManager.CONFIG_SECTION
     );
@@ -71,7 +47,7 @@ export class ConfigurationManager {
     // Get API key from secure storage (Requirement 10.2)
     const apiKey = await this.getApiKey();
 
-    const pluginConfig: ExtensionConfiguration = {
+    const pluginConfig: AgentConfiguration = {
       api: {
         baseUrl: config.get<string>("api.baseUrl", ""),
         model: config.get<string>("api.model", ""),
@@ -97,9 +73,10 @@ export class ConfigurationManager {
           "execute",
         ]),
       },
-
-      maxLoopCount: config.get<number>("maxLoopCount", 25),
-      contextWindowSize: config.get<number>("contextWindowSize", 100000),
+      advanced: {
+        maxLoopCount: config.get<number>("maxLoopCount", 25),
+        contextWindowSize: config.get<number>("contextWindowSize", 100000),
+      },
     };
 
     return pluginConfig;
@@ -146,7 +123,7 @@ export class ConfigurationManager {
       await this.setApiKey(apiConfig.apiKey);
     }
 
-    console.log("[ConfigurationManager] API configuration updated");
+    logger.debug("[ConfigurationManager] API configuration updated");
   }
 
   /**
@@ -173,7 +150,7 @@ export class ConfigurationManager {
       { key: "permissions.alwaysConfirm", value: permissions.alwaysConfirm },
     ]);
 
-    console.log("[ConfigurationManager] Permission settings updated");
+    logger.debug("[ConfigurationManager] Permission settings updated");
   }
 
   /**
@@ -283,7 +260,7 @@ export class ConfigurationManager {
    * @returns Disposable to stop listening
    */
   onConfigurationChanged(
-    callback: (config: ExtensionConfiguration) => void
+    callback: (config: AgentConfiguration) => void
   ): vscode.Disposable {
     return vscode.workspace.onDidChangeConfiguration(async (event) => {
       if (event.affectsConfiguration(ConfigurationManager.CONFIG_SECTION)) {
@@ -294,48 +271,20 @@ export class ConfigurationManager {
   }
 
   /**
-   * Get configuration formatted for UI display
-   *
-   * @returns Promise<UIConfiguration> UI-friendly configuration
-   */
-  async getConfigurationForUI(): Promise<UIConfiguration> {
-    const config = await this.getConfiguration();
-
-    return {
-      api: {
-        baseUrl: config.api.baseUrl,
-        model: config.api.model,
-        apiKey: config.api.apiKey,
-        temperature: config.api.temperature || 0,
-        maxTokens: config.api.maxTokens || 0,
-      },
-      permissions: {
-        allowReadByDefault: config.permissions.allowReadByDefault,
-        allowWriteByDefault: config.permissions.allowWriteByDefault,
-        allowExecuteByDefault: config.permissions.allowExecuteByDefault,
-      },
-      advanced: {
-        maxLoopCount: config.maxLoopCount,
-        contextWindowSize: config.contextWindowSize,
-      },
-    };
-  }
-
-  /**
    * Update configuration with partial updates
    * Supports batch updates of multiple configuration sections
    *
    * @param config Partial configuration to update
    */
   async updateConfiguration(
-    config: Partial<ExtensionConfiguration>
+    config: Partial<AgentConfiguration>
   ): Promise<void> {
     const updatePromises: Promise<void>[] = [];
 
     // Update simple fields
     await this.updateConfigKeys([
-      { key: "maxLoopCount", value: config.maxLoopCount },
-      { key: "contextWindowSize", value: config.contextWindowSize },
+      { key: "maxLoopCount", value: config.advanced?.maxLoopCount },
+      { key: "contextWindowSize", value: config.advanced?.contextWindowSize },
     ]);
 
     // Handle complex objects separately
@@ -348,6 +297,6 @@ export class ConfigurationManager {
     }
 
     await Promise.all(updatePromises);
-    console.log("[ConfigurationManager] Configuration updated");
+    logger.debug("[ConfigurationManager] Configuration updated");
   }
 }

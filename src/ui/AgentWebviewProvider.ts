@@ -24,9 +24,10 @@ import { ContextCollector } from "../managers/ContextCollector";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { ErrorHandler } from "../managers/ErrorHandler";
+import { logger } from "coding-agent-shared/utils/logger";
 import type {
   DisplayMessage,
-  UIConfiguration,
+  AgentConfiguration,
   UserMessage,
   WebviewMessage,
 } from "coding-agent-shared/types/messages";
@@ -101,18 +102,18 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       // Set default mode to 'code'
       this.modeManager.switchMode("code");
 
-      console.log("[AgentWebviewProvider] Configuration initialized");
+      logger.debug("[AgentWebviewProvider] Configuration initialized");
 
       // Listen for configuration changes
       this.context.subscriptions.push(
         this.configurationManager.onConfigurationChanged((newConfig) => {
           this.apiConfiguration = newConfig.api;
           this.permissionManager.updateSettings(newConfig.permissions);
-          console.log("[AgentWebviewProvider] Configuration updated");
+          logger.debug("[AgentWebviewProvider] Configuration updated");
         })
       );
     } catch (error) {
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to initialize configuration:",
         error
       );
@@ -142,7 +143,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.toolExecutor.registerTool(new GetDiagnosticsTool());
     this.toolExecutor.registerTool(new ListCodeDefinitionNamesTool());
 
-    console.log(`Registered ${this.toolExecutor.getToolCount()} tools`);
+    logger.debug(`Registered ${this.toolExecutor.getToolCount()} tools`);
   }
 
   resolveWebviewView(
@@ -247,8 +248,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       return;
     }
 
-    const { maxLoopCount, contextWindowSize } =
-      await this.configurationManager.getConfiguration();
+    const { advanced } = await this.configurationManager.getConfiguration();
 
     this.cancelCurrentTask();
 
@@ -256,13 +256,13 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       this,
       this.apiConfiguration,
       message.content,
-      maxLoopCount,
+      advanced.maxLoopCount,
       this.toolExecutor,
       this.promptBuilder,
       this.contextCollector,
       this.conversationHistoryManager,
       this.errorHandler,
-      contextWindowSize
+      advanced.contextWindowSize
     );
     await this.currentTask.start();
   }
@@ -286,7 +286,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         `Switched to ${modeDefinition.icon} ${modeDefinition.name} mode`
       );
 
-      console.log(`[AgentWebviewProvider] Mode changed to: ${mode}`);
+      logger.debug(`[AgentWebviewProvider] Mode changed to: ${mode}`);
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
@@ -311,11 +311,11 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         type: "conversation_cleared",
       });
 
-      console.log("[AgentWebviewProvider] Conversation cleared");
+      logger.debug("[AgentWebviewProvider] Conversation cleared");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to clear conversation:",
         error
       );
@@ -347,20 +347,20 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
           };
         }
       );
-      console.log(displayMessages);
+      logger.debug(displayMessages);
       // Send conversation history to webview
       this.postMessageToWebview({
         type: "conversation_history",
         messages: displayMessages,
       });
 
-      console.log(
+      logger.debug(
         `[AgentWebviewProvider] Sent ${displayMessages.length} messages to webview`
       );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to get conversation history:",
         error
       );
@@ -389,11 +389,11 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         type: "conversation_cleared",
       });
 
-      console.log("[AgentWebviewProvider] New conversation started");
+      logger.debug("[AgentWebviewProvider] New conversation started");
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to start new conversation:",
         error
       );
@@ -413,7 +413,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         this.conversationHistoryManager.getConversationHistory();
       const currentId =
         this.conversationHistoryManager.getCurrentConversationId();
-      console.log(conversations);
+      logger.debug(conversations);
       // Format conversations for display
       const formattedConversations = conversations.map((conv) => ({
         id: conv.id,
@@ -423,7 +423,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         isCurrent: conv.id === currentId,
       }));
 
-      console.log(
+      logger.debug(
         "🚀 ~ AgentWebviewProvider ~ handleGetConversationList ~ formattedConversations:",
         formattedConversations
       );
@@ -439,13 +439,13 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         conversations: formattedConversations,
       });
 
-      console.log(
+      logger.debug(
         `[AgentWebviewProvider] Sent ${formattedConversations.length} conversations to webview`
       );
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to get conversation list:",
         error
       );
@@ -469,7 +469,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         // Send the conversation messages to webview
         this.handleGetConversationHistory();
 
-        console.log(
+        logger.debug(
           `[AgentWebviewProvider] Switched to conversation: ${conversationId}`
         );
       } else {
@@ -481,7 +481,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to switch conversation:",
         error
       );
@@ -496,7 +496,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    * Handle delete conversation request
    */
   private handleDeleteConversation(conversationId: string): void {
-    console.log(
+    logger.debug(
       `[AgentWebviewProvider] Received delete request for: ${conversationId}`
     );
     try {
@@ -510,7 +510,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       const success =
         this.conversationHistoryManager.deleteConversation(conversationId);
 
-      console.log(`[AgentWebviewProvider] Delete result: ${success}`);
+      logger.debug(`[AgentWebviewProvider] Delete result: ${success}`);
 
       if (success) {
         if (isCurrentConversation) {
@@ -526,11 +526,11 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         // Refresh conversation list
         this.handleGetConversationList();
 
-        console.log(
+        logger.debug(
           `[AgentWebviewProvider] Deleted conversation: ${conversationId}`
         );
       } else {
-        console.warn(
+        logger.debug(
           `[AgentWebviewProvider] Failed to delete conversation: ${conversationId}`
         );
         this.postMessageToWebview({
@@ -541,7 +541,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error);
-      console.error(
+      logger.debug(
         "[AgentWebviewProvider] Failed to delete conversation:",
         error
       );
@@ -667,7 +667,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    */
   private async handleGetConfiguration(): Promise<void> {
     try {
-      const config = await this.configurationManager.getConfigurationForUI();
+      const config = await this.configurationManager.getConfiguration();
 
       this.postMessageToWebview({
         type: "configuration_loaded",
@@ -687,7 +687,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
    * Handle save configuration request
    */
   private async handleSaveConfiguration(
-    config: UIConfiguration
+    config: AgentConfiguration
   ): Promise<void> {
     try {
       const permissions = {
@@ -698,10 +698,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       };
 
       await this.configurationManager.updateConfiguration({
-        api: config.api,
+        ...config,
         permissions,
-        maxLoopCount: config.advanced.maxLoopCount,
-        contextWindowSize: config.advanced.contextWindowSize,
       });
 
       this.postMessageToWebview({

@@ -1,6 +1,7 @@
 import { OpenAI } from "openai";
 import type { ToolResult, ToolUse } from "coding-agent-shared/types/tools";
 import type { ApiConfiguration } from "coding-agent-shared/types/api";
+import { logger } from "coding-agent-shared/utils/logger";
 
 /**
  * Message history item
@@ -103,7 +104,7 @@ export class ApiHandler {
       await client.models.list();
       return true;
     } catch (error) {
-      console.error("API configuration validation failed:", error);
+      logger.debug("API configuration validation failed:", error);
       return false;
     }
   }
