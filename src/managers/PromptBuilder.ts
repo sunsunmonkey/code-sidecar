@@ -236,7 +236,9 @@ Always think step-by-step and use tools to accomplish tasks. When you've complet
    - Before using any tool, think carefully and ensure it is truly necessary.
 
 2. When finishing any response, you MUST always use the tool: \`attempt_completion\`.
-   - This applies to every final answer without exception.`;
+   - This applies to every final answer without exception.
+   
+3.Keep the output concise and focused strictly on executing the task. Do not include unnecessary explanations or commentary.`;
   }
 
   /**
