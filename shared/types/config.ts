@@ -12,6 +12,13 @@ export interface PermissionSettings {
   alwaysConfirm?: string[];
 }
 
+export const DEFAULT_PERMISSION_SETTINGS: Required<PermissionSettings> = {
+  allowReadByDefault: true,
+  allowWriteByDefault: false,
+  allowExecuteByDefault: false,
+  alwaysConfirm: ["delete", "execute"],
+};
+
 export interface AdvancedConfiguration {
   maxLoopCount: number;
   contextWindowSize: number;

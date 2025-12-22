@@ -3,51 +3,60 @@ import type {
   PermissionRequest,
   PermissionRequestWithId,
 } from "coding-agent-shared/types/permissions";
+import {
+  DEFAULT_PERMISSION_SETTINGS,
+  type PermissionSettings,
+} from "coding-agent-shared/types/config";
 import { logger } from "coding-agent-shared/utils/logger";
 
-/**
- * Permission settings for tool operations
- */
-export interface PermissionSettings {
-  /**
-   * Default allow read operations without confirmation
-   */
-  allowReadByDefault: boolean;
+type PermissionSettingsWithDefaults = Required<PermissionSettings>;
 
-  /**
-   * Default allow write operations without confirmation
-   */
-  allowWriteByDefault: boolean;
+const OPERATION_DEFAULTS: Record<
+  string,
+  keyof PermissionSettingsWithDefaults
+> = {
+  read: "allowReadByDefault",
+  write: "allowWriteByDefault",
+  modify: "allowWriteByDefault",
+  execute: "allowExecuteByDefault",
+};
 
-  /**
-   * Default allow command execution without confirmation
-   */
-  allowExecuteByDefault: boolean;
-
-  /**
-   * Operations that always require confirmation regardless of defaults
-   */
-  alwaysConfirm: string[];
-}
+const normalizeOperation = (operation: string): string =>
+  operation.trim().toLowerCase();
 
 /**
  * PermissionManager handles user authorization for tool operations
  */
 export class PermissionManager {
-  private settings: PermissionSettings;
+  private settings: PermissionSettingsWithDefaults;
 
   private webviewProvider: any;
   private pendingRequests: Map<string, (approved: boolean) => void> = new Map();
 
-  constructor(settings?: Partial<PermissionSettings>) {
-    // Default settings
-    this.settings = {
-      allowReadByDefault: true, //  Allow reads by default
-      allowWriteByDefault: false, // Require confirmation for writes
-      allowExecuteByDefault: false,
-      alwaysConfirm: ["delete", "execute"], // Always confirm dangerous operations
-      ...settings,
+  private static mergeSettings(
+    base: PermissionSettingsWithDefaults,
+    updates?: Partial<PermissionSettings>
+  ): PermissionSettingsWithDefaults {
+    const alwaysConfirm = (updates?.alwaysConfirm ?? base.alwaysConfirm).map(
+      (operation) => operation.trim().toLowerCase()
+    );
+
+    return {
+      allowReadByDefault:
+        updates?.allowReadByDefault ?? base.allowReadByDefault,
+      allowWriteByDefault:
+        updates?.allowWriteByDefault ?? base.allowWriteByDefault,
+      allowExecuteByDefault:
+        updates?.allowExecuteByDefault ?? base.allowExecuteByDefault,
+      alwaysConfirm,
     };
+  }
+
+  constructor(settings?: Partial<PermissionSettings>) {
+    this.settings = PermissionManager.mergeSettings(
+      DEFAULT_PERMISSION_SETTINGS,
+      settings
+    );
   }
 
   /**
@@ -76,46 +85,20 @@ export class PermissionManager {
    * @returns Promise<boolean> True if operation is allowed
    */
   async checkPermission(request: PermissionRequest): Promise<boolean> {
-    // Check if this operation always requires confirmation (Requirement 5.5)
-    const requiresConfirmation = this.settings.alwaysConfirm.includes(
-      request.operation
-    );
+    const operation = normalizeOperation(request.operation);
+    const defaultSetting = OPERATION_DEFAULTS[operation];
 
-    if (requiresConfirmation) {
+    // Check if this operation always requires confirmation (Requirement 5.5)
+    if (this.settings.alwaysConfirm.includes(operation)) {
       return await this.requestUserConfirmation(request);
     }
 
     // Check default permissions based on operation type
-    switch (request.operation.toLowerCase()) {
-      case "read":
-        // Requirement 5.3: Auto-approve reads if allowed by default
-        if (this.settings.allowReadByDefault) {
-          logger.debug(
-            `[PermissionManager] Auto-approved read operation: ${request.target}`
-          );
-          return true;
-        }
-        break;
-
-      case "write":
-      case "modify":
-        // Requirement 5.4: Check write permission setting
-        if (this.settings.allowWriteByDefault) {
-          logger.debug(
-            `[PermissionManager] Auto-approved write operation: ${request.target}`
-          );
-          return true;
-        }
-        break;
-
-      case "execute":
-        if (this.settings.allowExecuteByDefault) {
-          logger.debug(
-            `[PermissionManager] Auto-approved execute operation: ${request.target}`
-          );
-          return true;
-        }
-        break;
+    if (defaultSetting && this.settings[defaultSetting]) {
+      logger.debug(
+        `[PermissionManager] Auto-approved ${operation} operation: ${request.target}`
+      );
+      return true;
     }
 
     // If not auto-approved, request user confirmation
@@ -146,16 +129,10 @@ export class PermissionManager {
     );
 
     const approved = result === "Allow";
-
-    if (approved) {
-      logger.debug(
-        `[PermissionManager] User approved: ${request.toolName} - ${request.operation} on ${request.target}`
-      );
-    } else {
-      logger.debug(
-        `[PermissionManager] User denied: ${request.toolName} - ${request.operation} on ${request.target}`
-      );
-    }
+    const decision = approved ? "approved" : "denied";
+    logger.debug(
+      `[PermissionManager] User ${decision}: ${request.toolName} - ${request.operation} on ${request.target}`
+    );
 
     return approved;
   }
@@ -168,7 +145,7 @@ export class PermissionManager {
   ): Promise<boolean> {
     const requestId = `perm-${Date.now()}-${Math.random()
       .toString(36)
-      .substr(2, 9)}`;
+      .slice(2, 11)}`;
 
     const requestWithId: PermissionRequestWithId = {
       id: requestId,
@@ -219,10 +196,7 @@ export class PermissionManager {
    * @param settings Partial settings to update
    */
   updateSettings(settings: Partial<PermissionSettings>): void {
-    this.settings = {
-      ...this.settings,
-      ...settings,
-    };
+    this.settings = PermissionManager.mergeSettings(this.settings, settings);
     logger.debug("[PermissionManager] Settings updated:", this.settings);
   }
 
@@ -231,19 +205,9 @@ export class PermissionManager {
    * @returns Current permission settings
    */
   getSettings(): PermissionSettings {
-    return { ...this.settings };
-  }
-
-  /**
-   * Reset settings to defaults
-   */
-  resetSettings(): void {
-    this.settings = {
-      allowReadByDefault: true,
-      allowWriteByDefault: false,
-      allowExecuteByDefault: false,
-      alwaysConfirm: ["delete", "execute"],
+    return {
+      ...this.settings,
+      alwaysConfirm: [...this.settings.alwaysConfirm],
     };
-    logger.debug("[PermissionManager] Settings reset to defaults");
-}
+  }
 }

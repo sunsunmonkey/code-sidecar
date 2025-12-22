@@ -1,10 +1,13 @@
 import * as vscode from "vscode";
 
-import { PermissionSettings } from "../managers/PermissionManager";
 import { logger } from "coding-agent-shared/utils/logger";
 
 import { ApiConfiguration } from "coding-agent-shared/types/api";
-import type { AgentConfiguration } from "coding-agent-shared/types/config";
+import {
+  DEFAULT_PERMISSION_SETTINGS,
+  type AgentConfiguration,
+  type PermissionSettings,
+} from "coding-agent-shared/types/config";
 
 /**
  * ConfigurationManager handles reading, saving, and validating plugin configuration
@@ -46,6 +49,7 @@ export class ConfigurationManager {
 
     // Get API key from secure storage (Requirement 10.2)
     const apiKey = await this.getApiKey();
+    const permissionDefaults = DEFAULT_PERMISSION_SETTINGS;
 
     const pluginConfig: AgentConfiguration = {
       api: {
@@ -58,20 +62,20 @@ export class ConfigurationManager {
       permissions: {
         allowReadByDefault: config.get<boolean>(
           "permissions.allowReadByDefault",
-          true
+          permissionDefaults.allowReadByDefault
         ),
         allowWriteByDefault: config.get<boolean>(
           "permissions.allowWriteByDefault",
-          false
+          permissionDefaults.allowWriteByDefault
         ),
         allowExecuteByDefault: config.get<boolean>(
           "permissions.allowExecuteByDefault",
-          false
+          permissionDefaults.allowExecuteByDefault
         ),
-        alwaysConfirm: config.get<string[]>("permissions.alwaysConfirm", [
-          "delete",
-          "execute",
-        ]),
+        alwaysConfirm: config.get<string[]>(
+          "permissions.alwaysConfirm",
+          permissionDefaults.alwaysConfirm
+        ),
       },
       advanced: {
         maxLoopCount: config.get<number>("maxLoopCount", 25),

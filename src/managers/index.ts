@@ -2,7 +2,8 @@
  * Managers module exports
  */
 export { ModeManager, ModeDefinition } from "./ModeManager";
-export { PermissionManager, PermissionSettings } from "./PermissionManager";
+export { PermissionManager } from "./PermissionManager";
+export type { PermissionSettings } from "coding-agent-shared/types/config";
 export {
   ConversationHistoryManager,
   ConversationEntry,
