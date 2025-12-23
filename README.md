@@ -1,4 +1,4 @@
-﻿# code-sidercar
+﻿# code-sidercar 🏍️
 
 English | [Chinese](README_ZH.md)
 

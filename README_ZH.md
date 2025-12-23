@@ -1,4 +1,4 @@
-﻿# code-sidercar
+﻿# code-sidercar 🏍️
 
 [English](README.md) | 中文
 
