@@ -34,8 +34,8 @@
 
 ## Security & Configuration Tips
 
-- Never hardcode API keys or endpoints; use the `codingAgent.api.*` settings and keep secrets out of git.
-- Review permission defaults (`codingAgent.permissions.*`) before shipping and avoid committing generated artifacts (`dist/`, `node_modules/`).
+- Never hardcode API keys or endpoints; use the `codeSidecar.api.*` settings and keep secrets out of git.
+- Review permission defaults (`codeSidecar.permissions.*`) before shipping and avoid committing generated artifacts (`dist/`, `node_modules/`).
 
 # Base Rules
 

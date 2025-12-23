@@ -3,7 +3,7 @@
  */
 export { ModeManager, ModeDefinition } from "./ModeManager";
 export { PermissionManager } from "./PermissionManager";
-export type { PermissionSettings } from "coding-agent-shared/types/config";
+export type { PermissionSettings } from "code-sidecar-shared/types/config";
 export {
   ConversationHistoryManager,
   ConversationEntry,
@@ -23,3 +23,4 @@ export {
   ProjectContext,
 } from "./ContextCollector";
 export { PromptBuilder } from "./PromptBuilder";
+

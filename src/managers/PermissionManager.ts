@@ -2,12 +2,12 @@ import * as vscode from "vscode";
 import type {
   PermissionRequest,
   PermissionRequestWithId,
-} from "coding-agent-shared/types/permissions";
+} from "code-sidecar-shared/types/permissions";
 import {
   DEFAULT_PERMISSION_SETTINGS,
   type PermissionSettings,
-} from "coding-agent-shared/types/config";
-import { logger } from "coding-agent-shared/utils/logger";
+} from "code-sidecar-shared/types/config";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 type PermissionSettingsWithDefaults = Required<PermissionSettings>;
 
@@ -211,3 +211,4 @@ export class PermissionManager {
     };
   }
 }
+

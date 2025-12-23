@@ -14,10 +14,10 @@ import {
   AssistantMessageContent,
   AssistantMessageParser,
 } from "./assistantMessage";
-import { logger } from "coding-agent-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 
-import type { ApiConfiguration } from "coding-agent-shared/types/api";
-import type { ToolUse, ToolResult } from "coding-agent-shared/types/tools";
+import type { ApiConfiguration } from "code-sidecar-shared/types/api";
+import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
 
 /**
  * Task class manages the ReAct (Reasoning and Acting) loop
@@ -575,3 +575,4 @@ Always use the actual tool name as the XML tag name for proper parsing and execu
 `;
   }
 }
+

@@ -1,6 +1,6 @@
-﻿import React, { useState, useRef, useEffect } from "react";
+import React, { useState, useRef, useEffect } from "react";
 import { Check } from "lucide-react";
-import type { WorkMode } from "coding-agent-shared/types/modes";
+import type { WorkMode } from "code-sidecar-shared/types/modes";
 
 interface ModeSelectorProps {
   currentMode: WorkMode;
@@ -151,3 +151,4 @@ export const ModeSelector: React.FC<ModeSelectorProps> = ({
     </div>
   );
 };
+

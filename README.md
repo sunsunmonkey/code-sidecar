@@ -1,71 +1,62 @@
-# coding-agent-slim README
+﻿# code-sidercar
 
-This is the README for your extension "coding-agent-slim". After writing up a brief description, we recommend including the following sections.
+English | [Chinese](README_ZH.md)
 
-## Features
+code-sidercar is a VS Code extension project that provides a lightweight sidecar workflow with a webview UI, a core task runner, and tool adapters for LLM-assisted actions.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+## Overview
 
-For example if there is an image subfolder under your extension project workspace:
+- Focuses on a minimal, understandable architecture for learning and experimentation.
+- Keeps the extension host logic in `src/` and the UI in `webview-ui/` for clear separation.
+- Provides configurable LLM and permission settings to control behavior.
 
-\!\[feature X\]\(images/feature-x.png\)
+## Project Structure
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+- `src/`: VS Code extension entry and logic (`extension.ts`)
+- `src/core/`: API handler and task runner
+- `src/managers/`: workflow helpers
+- `src/tools/`: tool adapters
+- `src/ui/`: sidebar and webview glue
+- `webview-ui/`: React + Vite client, built to `webview-ui/dist/`
+- `assets/`: icons for the activity bar
+- `dist/`: build output (generated)
 
-## Requirements
+## How It Works (High Level)
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+1. The extension activates and loads configuration.
+2. Core modules handle API requests and orchestrate tasks.
+3. The webview UI communicates with the extension for user-facing interactions.
 
-## Extension Settings
+## Configuration
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+This extension contributes these settings:
 
-For example:
+- `codeSidecar.api.baseUrl`: Base URL for the LLM API endpoint.
+- `codeSidecar.api.model`: Model name to use for LLM requests.
+- `codeSidecar.api.temperature`: Temperature for LLM responses (0-2).
+- `codeSidecar.api.maxTokens`: Maximum tokens for LLM responses.
+- `codeSidecar.permissions.allowReadByDefault`: Allow file read operations without confirmation.
+- `codeSidecar.permissions.allowWriteByDefault`: Allow file write operations without confirmation.
+- `codeSidecar.permissions.allowExecuteByDefault`: Allow command execution without confirmation.
+- `codeSidecar.permissions.alwaysConfirm`: Operations that always require confirmation.
+- `codeSidecar.maxLoopCount`: Maximum number of ReAct loop iterations.
+- `codeSidecar.contextWindowSize`: Maximum context window size in characters.
 
-This extension contributes the following settings:
+## Development
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+- Install dependencies: `pnpm install`
+- Type-check, lint, and build: `pnpm run compile`
+- Watch mode: `pnpm run watch`
+- Lint only: `pnpm run lint`
+- Type checks only: `pnpm run check-types`
+- Tests: `pnpm run compile-tests` then `pnpm test`
 
-## Known Issues
+## Status
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+- This project is mainly my graduation design and is intended for learning.
+- The overall design and content are intentionally simple.
+- It is still a WIP and not fully polished.
 
-## Release Notes
+## Build Notes
 
-Users appreciate release notes as you update your extension.
-
-### 1.0.0
-
-Initial release of ...
-
-### 1.0.1
-
-Fixed issue #.
-
-### 1.1.0
-
-Added features X, Y, and Z.
-
----
-
-## Following extension guidelines
-
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
-
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+- Development and build work used kiro and codex as the main coding assistants.

@@ -6,7 +6,7 @@ export async function activate(context: vscode.ExtensionContext) {
 
   context.subscriptions.push(
     vscode.window.registerWebviewViewProvider(
-      "coding-agent-slim.SidebarProvider",
+      "code-sidecar.SidebarProvider",
       provider,
       {
         webviewOptions: { retainContextWhenHidden: true },
@@ -17,7 +17,7 @@ export async function activate(context: vscode.ExtensionContext) {
   // 注册分析选中代码的命令
   context.subscriptions.push(
     vscode.commands.registerCommand(
-      "coding-agent-slim.analyzeSelectedCode",
+      "code-sidecar.analyzeSelectedCode",
       async () => {
         const editor = vscode.window.activeTextEditor;
         if (!editor) {
@@ -39,7 +39,7 @@ ${selectedText}
 
         // vscode 自带的关于 webview 的命令，自动唤醒 webview 
         vscode.commands.executeCommand(
-          "coding-agent-slim.SidebarProvider.focus"
+          "code-sidecar.SidebarProvider.focus"
         );
       }
     )

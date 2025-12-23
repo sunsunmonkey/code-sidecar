@@ -1,10 +1,10 @@
 import { Tool, ToolDefinition } from "./Tool";
 import { PermissionManager } from "../managers/PermissionManager";
 import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
-import { logger } from "coding-agent-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 
-import type { ToolUse, ToolResult } from "coding-agent-shared/types/tools";
-import type { PermissionRequest } from "coding-agent-shared/types/messages";
+import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
+import type { PermissionRequest } from "code-sidecar-shared/types/messages";
 /**
  * ToolExecutor manages tool registration and execution
  * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 5.1, 5.2
@@ -306,3 +306,4 @@ export class ToolExecutor {
     logger.debug("All tools cleared");
 }
 }
+

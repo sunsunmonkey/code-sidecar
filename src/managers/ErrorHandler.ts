@@ -1,4 +1,4 @@
-import { logger } from "coding-agent-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 /**
  * Error Handler for managing and recovering from various error types
@@ -531,3 +531,4 @@ export class ErrorHandler {
     return stats;
   }
 }
+

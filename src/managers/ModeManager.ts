@@ -1,5 +1,5 @@
-import type { WorkMode } from "coding-agent-shared/types/modes";
-import { logger } from "coding-agent-shared/utils/logger";
+import type { WorkMode } from "code-sidecar-shared/types/modes";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 /**
  * Mode definition interface
@@ -243,3 +243,4 @@ You are operating in **Debug Mode**. Your primary focus is on:
     return this.modes.has(mode);
   }
 }
+

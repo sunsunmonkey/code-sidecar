@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from "react";
 import { History, MessageSquare, Plus, Trash2, X } from "lucide-react";
-import type { ConversationSummary } from "coding-agent-shared/types/messages";
-import { logger } from "coding-agent-shared/utils/logger";
+import type { ConversationSummary } from "code-sidecar-shared/types/messages";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 interface ConversationListProps {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -287,3 +287,4 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     </div>
   );
 };
+

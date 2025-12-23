@@ -1,20 +1,20 @@
 import * as vscode from "vscode";
 
-import { logger } from "coding-agent-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 
-import { ApiConfiguration } from "coding-agent-shared/types/api";
+import { ApiConfiguration } from "code-sidecar-shared/types/api";
 import {
   DEFAULT_PERMISSION_SETTINGS,
   type AgentConfiguration,
   type PermissionSettings,
-} from "coding-agent-shared/types/config";
+} from "code-sidecar-shared/types/config";
 
 /**
  * ConfigurationManager handles reading, saving, and validating plugin configuration
  */
 export class ConfigurationManager {
-  private static readonly CONFIG_SECTION = "codingAgent";
-  private static readonly API_KEY_SECRET = "codingAgent.apiKey";
+  private static readonly CONFIG_SECTION = "codeSidecar";
+  private static readonly API_KEY_SECRET = "codeSidecar.apiKey";
 
   constructor(private context: vscode.ExtensionContext) {}
 
@@ -240,13 +240,13 @@ export class ConfigurationManager {
 
     if (!isConfigured) {
       const result = await vscode.window.showWarningMessage(
-        "Coding Agent is not configured. Please configure your API settings.",
+        "CodeSidecar is not configured. Please configure your API settings.",
         "Configure Now",
         "Later"
       );
 
       if (result === "Configure Now") {
-        await vscode.commands.executeCommand("coding-agent-slim.configureApi");
+        await vscode.commands.executeCommand("code-sidecar.configureApi");
         // Check again after configuration
         return await this.isApiConfigured();
       }
@@ -304,3 +304,4 @@ export class ConfigurationManager {
     logger.debug("[ConfigurationManager] Configuration updated");
   }
 }
+

@@ -1,6 +1,6 @@
 {
-  "name": "coding-agent-slim",
-  "displayName": "coding-agent-slim",
+  "name": "code-sidecar",
+  "displayName": "CodeSidecar",
   "description": "",
   "version": "0.0.1",
   "engines": {
@@ -14,15 +14,15 @@
   "contributes": {
     "commands": [
       {
-        "command": "coding-agent-slim.analyzeSelectedCode",
-        "title": "Coding Agent",
-        "category": "Coding Agent"
+        "command": "code-sidecar.analyzeSelectedCode",
+        "title": "CodeSidecar",
+        "category": "CodeSidecar"
       }
     ],
     "menus": {
       "editor/context": [
         {
-          "command": "coding-agent-slim.analyzeSelectedCode",
+          "command": "code-sidecar.analyzeSelectedCode",
           "when": "editorHasSelection",
           "group": "navigation"
         }
@@ -31,64 +31,64 @@
     "viewsContainers": {
       "activitybar": [
         {
-          "id": "coding-agent-slim-ActivityBar",
-          "title": "Coding Agent Slim",
+          "id": "code-sidecar-ActivityBar",
+          "title": "CodeSidecar",
           "icon": "assets/icons/icon.svg"
         }
       ]
     },
     "views": {
-      "coding-agent-slim-ActivityBar": [
+      "code-sidecar-ActivityBar": [
         {
           "type": "webview",
-          "id": "coding-agent-slim.SidebarProvider",
-          "name": "Coding Agent Slim",
+          "id": "code-sidecar.SidebarProvider",
+          "name": "CodeSidecar",
           "icon": "assets/icons/icon.svg"
         }
       ]
     },
     "configuration": {
-      "title": "Coding Agent",
+      "title": "CodeSidecar",
       "properties": {
-        "codingAgent.api.baseUrl": {
+        "codeSidecar.api.baseUrl": {
           "type": "string",
           "default": "",
           "description": "Base URL for the LLM API endpoint"
         },
-        "codingAgent.api.model": {
+        "codeSidecar.api.model": {
           "type": "string",
           "default": "",
           "description": "Model name to use for LLM requests"
         },
-        "codingAgent.api.temperature": {
+        "codeSidecar.api.temperature": {
           "type": "number",
           "default": 0.7,
           "minimum": 0,
           "maximum": 2,
           "description": "Temperature for LLM responses (0-2)"
         },
-        "codingAgent.api.maxTokens": {
+        "codeSidecar.api.maxTokens": {
           "type": "number",
           "default": 4096,
           "minimum": 1,
           "description": "Maximum tokens for LLM responses"
         },
-        "codingAgent.permissions.allowReadByDefault": {
+        "codeSidecar.permissions.allowReadByDefault": {
           "type": "boolean",
           "default": true,
           "description": "Allow file read operations without confirmation"
         },
-        "codingAgent.permissions.allowWriteByDefault": {
+        "codeSidecar.permissions.allowWriteByDefault": {
           "type": "boolean",
           "default": false,
           "description": "Allow file write operations without confirmation"
         },
-        "codingAgent.permissions.allowExecuteByDefault": {
+        "codeSidecar.permissions.allowExecuteByDefault": {
           "type": "boolean",
           "default": false,
           "description": "Allow command execution without confirmation"
         },
-        "codingAgent.permissions.alwaysConfirm": {
+        "codeSidecar.permissions.alwaysConfirm": {
           "type": "array",
           "items": {
             "type": "string"
@@ -99,14 +99,14 @@
           ],
           "description": "Operations that always require confirmation"
         },
-        "codingAgent.maxLoopCount": {
+        "codeSidecar.maxLoopCount": {
           "type": "number",
           "default": 25,
           "minimum": 1,
           "maximum": 100,
           "description": "Maximum number of ReAct loop iterations"
         },
-        "codingAgent.contextWindowSize": {
+        "codeSidecar.contextWindowSize": {
           "type": "number",
           "default": 100000,
           "minimum": 1000,
@@ -135,7 +135,7 @@
     "@types/vscode": "^1.106.1",
     "@vscode/test-cli": "^0.0.12",
     "@vscode/test-electron": "^2.5.2",
-    "coding-agent-shared": "workspace:*",
+    "code-sidecar-shared": "workspace:*",
     "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "npm-run-all": "^4.1.5",
@@ -146,3 +146,4 @@
     "openai": "^6.9.1"
   }
 }
+

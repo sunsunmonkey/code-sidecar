@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
 import { HistoryItem } from "../core/apiHandler";
-import { logger } from "coding-agent-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 /**
  * Conversation history entry for persistence
@@ -25,7 +25,7 @@ export interface HistoryConfig {
  * Handles persistence, loading, and intelligent truncation of conversation history
  */
 export class ConversationHistoryManager {
-  private static readonly HISTORY_KEY = "codingAgent.conversationHistory";
+  private static readonly HISTORY_KEY = "codeSidecar.conversationHistory";
 
   private currentConversation: ConversationEntry | null = null;
 
@@ -287,3 +287,4 @@ export class ConversationHistoryManager {
     return this.currentConversation?.messages.length ?? 0;
   }
 }
+

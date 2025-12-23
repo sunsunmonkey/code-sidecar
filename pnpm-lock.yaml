@@ -27,7 +27,7 @@ importers:
       '@vscode/test-electron':
         specifier: ^2.5.2
         version: 2.5.2
-      coding-agent-shared:
+      code-sidecar-shared:
         specifier: workspace:*
         version: link:shared
       esbuild:
@@ -123,7 +123,7 @@ importers:
       '@vitejs/plugin-react-swc':
         specifier: ^4.2.2
         version: 4.2.2(vite@7.2.4(@types/node@24.10.1)(jiti@2.6.1)(lightningcss@1.30.2))
-      coding-agent-shared:
+      code-sidecar-shared:
         specifier: workspace:*
         version: link:../shared
       eslint:
@@ -6266,3 +6266,4 @@ snapshots:
     optional: true
 
   zwitch@2.0.4: {}
+

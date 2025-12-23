@@ -16,21 +16,21 @@ import {
   ListCodeDefinitionNamesTool,
 } from "../tools";
 import { ModeManager } from "../managers/ModeManager";
-import type { ApiConfiguration } from "coding-agent-shared/types/api";
-import type { WorkMode } from "coding-agent-shared/types/modes";
+import type { ApiConfiguration } from "code-sidecar-shared/types/api";
+import type { WorkMode } from "code-sidecar-shared/types/modes";
 import { PromptBuilder } from "../managers/PromptBuilder";
 import { PermissionManager } from "../managers/PermissionManager";
 import { ContextCollector } from "../managers/ContextCollector";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { ErrorHandler } from "../managers/ErrorHandler";
-import { logger } from "coding-agent-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 import type {
   DisplayMessage,
   AgentConfiguration,
   UserMessage,
   WebviewMessage,
-} from "coding-agent-shared/types/messages";
+} from "code-sidecar-shared/types/messages";
 
 /**
  * Agent Webview Provider manages the sidebar panel and task execution
@@ -780,3 +780,4 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     });
   }
 }
+

@@ -1,8 +1,8 @@
 import React, { useLayoutEffect, useRef } from "react";
 import { MessageSquare } from "lucide-react";
 import { Message } from "./Message";
-import type { DisplayMessage } from "coding-agent-shared/types/messages";
-import { logger } from "coding-agent-shared/utils/logger";
+import type { DisplayMessage } from "code-sidecar-shared/types/messages";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 const AUTO_SCROLL_THRESHOLD_PX = 32;
 const SCROLL_UP_THRESHOLD_PX = 2;
@@ -88,3 +88,4 @@ export const MessageList: React.FC<MessageListProps> = ({
     </div>
   );
 };
+

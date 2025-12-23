@@ -1,7 +1,7 @@
 import { OpenAI } from "openai";
-import type { ToolResult, ToolUse } from "coding-agent-shared/types/tools";
-import type { ApiConfiguration } from "coding-agent-shared/types/api";
-import { logger } from "coding-agent-shared/utils/logger";
+import type { ToolResult, ToolUse } from "code-sidecar-shared/types/tools";
+import type { ApiConfiguration } from "code-sidecar-shared/types/api";
+import { logger } from "code-sidecar-shared/utils/logger";
 
 /**
  * Message history item
@@ -109,3 +109,4 @@ export class ApiHandler {
     }
   }
 }
+

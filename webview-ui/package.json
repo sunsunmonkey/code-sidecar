@@ -36,7 +36,7 @@
     "@types/react-syntax-highlighter": "^15.5.13",
     "@types/vscode-webview": "^1.57.5",
     "@vitejs/plugin-react-swc": "^4.2.2",
-    "coding-agent-shared": "workspace:*",
+    "code-sidecar-shared": "workspace:*",
     "eslint": "^9.39.1",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
@@ -47,3 +47,4 @@
     "vite": "^7.2.4"
   }
 }
+

@@ -15,7 +15,7 @@ import {
   Wrench,
   X,
 } from "lucide-react";
-import type { ToolUse, ToolResult } from "coding-agent-shared/types/tools";
+import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
 
 /**
  * ToolCallDisplay component shows a tool call with its parameters
@@ -183,3 +183,4 @@ export const ToolCallDisplay: React.FC<ToolCallDisplayProps> = ({
     </div>
   );
 };
+

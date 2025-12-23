@@ -1,5 +1,5 @@
 import React from "react";
-import type { TokenUsageSnapshot } from "coding-agent-shared/types/messages";
+import type { TokenUsageSnapshot } from "code-sidecar-shared/types/messages";
 
 interface ContextPanelProps {
   usage: TokenUsageSnapshot | null;
@@ -89,3 +89,4 @@ export const ContextPanel: React.FC<ContextPanelProps> = ({ usage }) => {
     </div>
   );
 };
+

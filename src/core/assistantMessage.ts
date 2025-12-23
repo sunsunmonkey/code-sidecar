@@ -1,4 +1,4 @@
-import type { ToolUse } from "coding-agent-shared/types/tools";
+import type { ToolUse } from "code-sidecar-shared/types/tools";
 
 /**
  * Text content in assistant message
@@ -232,3 +232,4 @@ export class AssistantMessageParser {
     }
   }
 }
+

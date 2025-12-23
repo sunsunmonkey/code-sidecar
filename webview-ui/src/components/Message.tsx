@@ -18,7 +18,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import type { DisplayMessage } from "coding-agent-shared/types/messages";
+import type { DisplayMessage } from "code-sidecar-shared/types/messages";
 import { ToolCallDisplay } from "./ToolCallDisplay";
 import { useTheme } from "../hooks/useTheme";
 
@@ -349,3 +349,4 @@ export const Message: React.FC<MessageProps> = ({
     </div>
   );
 };
+
