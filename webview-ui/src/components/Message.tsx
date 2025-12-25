@@ -40,6 +40,7 @@ export const Message: React.FC<MessageProps> = ({
   onPermissionResponse,
 }) => {
   const themeKind = useTheme();
+  const [isPermissionExpanded, setIsPermissionExpanded] = React.useState(false);
   const {
     role,
     content,
@@ -49,9 +50,17 @@ export const Message: React.FC<MessageProps> = ({
     isStreaming,
     permissionRequest,
   } = message;
+  const isPermissionMessage = role === "permission" && !!permissionRequest;
+  const isPermissionResponded = isPermissionMessage && content !== "";
 
   // Select syntax highlighter theme based on VSCode theme
   const syntaxTheme = themeKind === "light" ? vs : vscDarkPlus;
+
+  React.useEffect(() => {
+    if (isPermissionResponded) {
+      setIsPermissionExpanded(false);
+    }
+  }, [isPermissionResponded]);
 
   // Handle permission request messages
   if (role === "permission" && permissionRequest) {
@@ -84,8 +93,9 @@ export const Message: React.FC<MessageProps> = ({
       }
     };
 
-    const isResponded = content !== "";
+    const isResponded = isPermissionResponded;
     const isApproved = content.toLowerCase().includes("approved");
+    const showPermissionDetails = !isResponded || isPermissionExpanded;
 
     return (
       <div className="mb-4 p-3 rounded-lg bg-[var(--vscode-editor-background)] shadow-[0_4px_12px_rgba(0,0,0,0.12)] w-full">
@@ -123,35 +133,12 @@ export const Message: React.FC<MessageProps> = ({
             </span>
           </div>
 
-          <div
-            className="bg-[var(--vscode-textCodeBlock-background)] rounded p-2 mb-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
-            style={{ fontSize: "13px" }}
-          >
-            <div className="mb-1">
-              <span
-                style={{
-                  fontSize: "11px",
-                  color: "var(--vscode-descriptionForeground)",
-                  textTransform: "uppercase",
-                  fontWeight: 600,
-                }}
-              >
-                Target
-              </span>
-              <div
-                style={{
-                  color: "var(--vscode-foreground)",
-                  fontFamily: "var(--vscode-editor-font-family)",
-                  wordBreak: "break-all",
-                  marginTop: "2px",
-                }}
-              >
-                {permissionRequest.target}
-              </div>
-            </div>
-
-            {permissionRequest.details && (
-              <div>
+          {showPermissionDetails ? (
+            <div
+              className="bg-[var(--vscode-textCodeBlock-background)] rounded p-2 mb-2 shadow-[inset_0_0_0_1px_rgba(255,255,255,0.04)]"
+              style={{ fontSize: "13px" }}
+            >
+              <div className="mb-1">
                 <span
                   style={{
                     fontSize: "11px",
@@ -160,20 +147,61 @@ export const Message: React.FC<MessageProps> = ({
                     fontWeight: 600,
                   }}
                 >
-                  Details
+                  Target
                 </span>
                 <div
                   style={{
                     color: "var(--vscode-foreground)",
-                    whiteSpace: "pre-wrap",
+                    fontFamily: "var(--vscode-editor-font-family)",
+                    wordBreak: "break-all",
                     marginTop: "2px",
                   }}
                 >
-                  {permissionRequest.details}
+                  {permissionRequest.target}
                 </div>
               </div>
-            )}
-          </div>
+
+              {permissionRequest.details && (
+                <div>
+                  <span
+                    style={{
+                      fontSize: "11px",
+                      color: "var(--vscode-descriptionForeground)",
+                      textTransform: "uppercase",
+                      fontWeight: 600,
+                    }}
+                  >
+                    Details
+                  </span>
+                  <div
+                    style={{
+                      color: "var(--vscode-foreground)",
+                      whiteSpace: "pre-wrap",
+                      marginTop: "2px",
+                    }}
+                  >
+                    {permissionRequest.details}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            <div className="flex items-center gap-2 text-xs text-[var(--vscode-descriptionForeground)]">
+              <span className="uppercase font-semibold" style={{ fontSize: "10px" }}>
+                Target
+              </span>
+              <span
+                className="min-w-0 truncate"
+                style={{
+                  color: "var(--vscode-foreground)",
+                  fontFamily: "var(--vscode-editor-font-family)",
+                }}
+                title={permissionRequest.target}
+              >
+                {permissionRequest.target}
+              </span>
+            </div>
+          )}
         </div>
 
         {isResponded ? (
@@ -200,6 +228,13 @@ export const Message: React.FC<MessageProps> = ({
             >
               {isApproved ? "Approved" : "Denied"}
             </span>
+            <button
+              onClick={() => setIsPermissionExpanded((prev) => !prev)}
+              type="button"
+              className="ml-auto text-xs text-[var(--vscode-descriptionForeground)] hover:text-[var(--vscode-foreground)]"
+            >
+              {showPermissionDetails ? "Hide details" : "Show details"}
+            </button>
           </div>
         ) : (
           <div className="flex gap-2">
