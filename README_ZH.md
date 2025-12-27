@@ -1,8 +1,8 @@
-﻿# code-sidercar 🏍️
+﻿# code-sidecar 🏍️
 
 [English](README.md) | 中文
 
-code-sidercar 是一个 VS Code 扩展项目，提供轻量的 sidecar 工作流，包含 webview UI、核心任务执行器，以及用于 LLM 辅助操作的工具适配层。
+code-sidecar 是一个 VS Code 扩展项目，提供轻量的 sidecar 工作流，包含 webview UI、核心任务执行器，以及用于 LLM 辅助操作的工具适配层。
 
 ## 概述
 

@@ -1,8 +1,8 @@
-﻿# code-sidercar 🏍️
+﻿# code-sidecar 🏍️
 
 English | [Chinese](README_ZH.md)
 
-code-sidercar is a VS Code extension project that provides a lightweight sidecar workflow with a webview UI, a core task runner, and tool adapters for LLM-assisted actions.
+code-sidecar is a VS Code extension project that provides a lightweight sidecar workflow with a webview UI, a core task runner, and tool adapters for LLM-assisted actions.
 
 ## Overview
 
