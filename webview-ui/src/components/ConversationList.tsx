@@ -76,6 +76,12 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     vscode.postMessage({ type: "delete_conversation", conversationId });
   };
 
+  const handleClearConversationHistory = () => {
+    logger.debug("Clear conversation history clicked");
+    vscode.postMessage({ type: "clear_conversation_history" });
+    onConversationSwitch?.();
+  };
+
   const handleToggleList = () => {
     if (!isExpanded) {
       // Request conversation list when opening
@@ -211,6 +217,17 @@ export const ConversationList: React.FC<ConversationListProps> = ({
                   </span>
                 </button>
                 <button
+                  className="bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] border-none px-2.5 py-1 rounded cursor-pointer text-xs transition-colors hover:bg-[var(--vscode-button-secondaryHoverBackground)]"
+                  onClick={handleClearConversationHistory}
+                  title="清空会话历史"
+                  type="button"
+                >
+                  <span className="inline-flex items-center gap-1.5">
+                    <Trash2 size={14} strokeWidth={2.2} />
+                    <span>清空</span>
+                  </span>
+                </button>
+                <button
                   className="bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] border-none px-2 py-1 rounded cursor-pointer text-xs transition-colors hover:bg-[var(--vscode-button-secondaryHoverBackground)]"
                   onClick={() => setIsExpanded(false)}
                   title="收起"
@@ -274,6 +291,17 @@ export const ConversationList: React.FC<ConversationListProps> = ({
           </button>
           <button
             className="bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] border-none px-2.5 py-1 rounded cursor-pointer text-xs transition-colors hover:bg-[var(--vscode-button-secondaryHoverBackground)]"
+            onClick={handleClearConversationHistory}
+            title="清空会话历史"
+            type="button"
+          >
+            <span className="inline-flex items-center gap-1.5">
+              <Trash2 size={14} strokeWidth={2.2} />
+              <span>清空</span>
+            </span>
+          </button>
+          <button
+            className="bg-[var(--vscode-button-secondaryBackground)] text-[var(--vscode-button-secondaryForeground)] border-none px-2.5 py-1 rounded cursor-pointer text-xs transition-colors hover:bg-[var(--vscode-button-secondaryHoverBackground)]"
             onClick={() => setIsExpanded(false)}
             title="收起"
             type="button"
@@ -287,4 +315,3 @@ export const ConversationList: React.FC<ConversationListProps> = ({
     </div>
   );
 };
-

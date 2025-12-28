@@ -27,6 +27,10 @@ code-sidecar is a VS Code extension project that provides a lightweight sidecar 
 2. Core modules handle API requests and orchestrate tasks.
 3. The webview UI communicates with the extension for user-facing interactions.
 
+## Chat Commands
+
+- `/init`: Generate or update `AGENTS.md` at the workspace root with concise, repo-specific guidance.
+
 ## Configuration
 
 This extension contributes these settings:

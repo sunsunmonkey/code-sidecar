@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import { Task } from "../core/task";
 import { HistoryItem } from "../core/apiHandler";
+import { buildInitPrompt, parseInitCommand } from "../core/initCommand";
 
 import {
   ToolExecutor,
@@ -208,6 +209,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   } = {
     mode_change: (message) => this.handleModeChange(message.mode),
     clear_conversation: () => this.handleClearConversation(),
+    clear_conversation_history: () => this.handleClearConversationHistory(),
     get_conversation_history: () => this.handleGetConversationHistory(),
     new_conversation: () => this.handleNewConversation(),
     get_conversation_list: () => this.handleGetConversationList(),
@@ -255,17 +257,24 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     this.cancelCurrentTask();
 
+    const initCommand = parseInitCommand(message.content);
+    const taskMessage = initCommand
+      ? buildInitPrompt(initCommand.guidance)
+      : message.content;
+    const displayMessage = initCommand ? initCommand.raw : message.content;
+
     this.currentTask = new Task(
       this,
       this.apiConfiguration,
-      message.content,
+      taskMessage,
       advanced.maxLoopCount,
       this.toolExecutor,
       this.promptBuilder,
       this.contextCollector,
       this.conversationHistoryManager,
       this.errorHandler,
-      advanced.contextWindowSize
+      advanced.contextWindowSize,
+      displayMessage
     );
     await this.currentTask.start();
   }
@@ -325,6 +334,40 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       this.postMessageToWebview({
         type: "error",
         message: `Failed to clear conversation: ${errorMessage}`,
+      });
+    }
+  }
+
+  /**
+   * Handle clear conversation history request
+   */
+  private handleClearConversationHistory(): void {
+    try {
+      this.cancelCurrentTask();
+      this.conversationHistoryManager.clearAllConversations();
+
+      this.postMessageToWebview({
+        type: "conversation_history",
+        messages: [],
+      });
+
+      this.postMessageToWebview({
+        type: "conversation_cleared",
+      });
+
+      this.handleGetConversationList();
+
+      logger.debug("[AgentWebviewProvider] Conversation history cleared");
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      logger.debug(
+        "[AgentWebviewProvider] Failed to clear conversation history:",
+        error
+      );
+      this.postMessageToWebview({
+        type: "error",
+        message: `Failed to clear conversation history: ${errorMessage}`,
       });
     }
   }

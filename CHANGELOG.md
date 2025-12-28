@@ -8,3 +8,5 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 
 - Initial release
 - Add task-level diff preview in chat with a dedicated diff panel
+- Add /init chat command to generate AGENTS.md guidance
+- Add action to clear all conversation history from the chat list

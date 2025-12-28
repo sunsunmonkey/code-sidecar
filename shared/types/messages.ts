@@ -74,6 +74,7 @@ export type UserMessage =
   | { type: "user_message"; content: string }
   | { type: "mode_change"; mode: WorkMode }
   | { type: "clear_conversation" }
+  | { type: "clear_conversation_history" }
   | { type: "new_conversation" }
   | { type: "cancel_task" }
   | { type: "get_operation_history" }

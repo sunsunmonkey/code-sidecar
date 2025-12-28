@@ -37,6 +37,7 @@ export class Task {
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
   private contextWindowTokens: number;
+  private displayMessage: string;
   private isCancelled = false;
   private isCompleted = false;
   private abortController: AbortController | null = null;
@@ -52,7 +53,8 @@ export class Task {
     contextCollector: ContextCollector,
     conversationHistoryManager: ConversationHistoryManager,
     errorHandler: ErrorHandler,
-    contextWindowTokens: number
+    contextWindowTokens: number,
+    displayMessage?: string
   ) {
     this.id = `task-${Date.now()}-${Math.random()
       .toString(36)
@@ -64,6 +66,7 @@ export class Task {
     this.conversationHistoryManager = conversationHistoryManager;
     this.errorHandler = errorHandler;
     this.contextWindowTokens = contextWindowTokens || 0;
+    this.displayMessage = displayMessage ?? message;
     this.diffTracker = new TaskDiffTracker(this.id);
   }
 
@@ -95,15 +98,15 @@ export class Task {
       // Save user message to history
       // TODO 这块的 history 和 展示的, 思考vscode workspace context
 
-      this.conversationHistoryManager.addMessage({
-        role: "user",
-        content: this.message,
-      });
-      logger.debug("save", this.message);
-      await this.recursivelyMakeRequest(this.history);
-    } catch (error) {
-      this.handleTaskError(error, "task_start");
-    }
+    this.conversationHistoryManager.addMessage({
+      role: "user",
+      content: this.displayMessage,
+    });
+    logger.debug("save", this.displayMessage);
+    await this.recursivelyMakeRequest(this.history);
+  } catch (error) {
+    this.handleTaskError(error, "task_start");
+  }
   }
 
   /**
@@ -639,7 +642,7 @@ export class Task {
     const errorContext: ErrorContext = {
       operation,
       timestamp: new Date(),
-      userMessage: this.message,
+      userMessage: this.displayMessage,
       additionalInfo: {
         taskId: this.id,
         loopCount: this.loopCount,

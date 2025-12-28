@@ -99,6 +99,19 @@ export class ConversationHistoryManager {
   }
 
   /**
+   * Clear all conversations (current and archived)
+   */
+  clearAllConversations(): void {
+    this.currentConversation = null;
+    this.context.workspaceState.update(
+      ConversationHistoryManager.HISTORY_KEY,
+      []
+    );
+    this.startNewConversation();
+    logger.debug("[ConversationHistoryManager] Cleared all conversations");
+  }
+
+  /**
    * Delete a conversation from history
    */
   deleteConversation(conversationId: string): boolean {
