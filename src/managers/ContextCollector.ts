@@ -52,6 +52,12 @@ export interface ProjectContext {
 
   // Project file tree
   fileTree?: FileNode[];
+
+  // AGENTS.md instructions
+  agentInstructions?: {
+    path: string;
+    content: string;
+  };
 }
 
 /**
@@ -100,6 +106,9 @@ export class ContextCollector {
     // Collect project file tree
     context.fileTree = await this.collectFileTree();
 
+    // Collect AGENTS.md guidance if present
+    context.agentInstructions = await this.collectAgentInstructions();
+
     return context;
   }
 
@@ -140,6 +149,12 @@ export class ContextCollector {
     if (context.fileTree && context.fileTree.length > 0) {
       const treeContent = this.formatFileTree(context.fileTree, 0, 3);
       blocks.push(`## Workspace Structure\n${treeContent}`);
+    }
+
+    if (context.agentInstructions) {
+      blocks.push(
+        `## AGENTS.md (${context.agentInstructions.path})\n${context.agentInstructions.content}`
+      );
     }
 
     return blocks.join("\n\n");
@@ -184,6 +199,38 @@ export class ContextCollector {
     const tree = await this.buildFileTree(rootFolder.uri, rootFolder.name);
 
     return tree ? [tree] : [];
+  }
+
+  /**
+   * Collect AGENTS.md if it exists at the workspace root
+   */
+  private async collectAgentInstructions(): Promise<{
+    path: string;
+    content: string;
+  } | undefined> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return undefined;
+    }
+
+    const agentsUri = vscode.Uri.joinPath(
+      workspaceFolders[0].uri,
+      "AGENTS.md"
+    );
+
+    try {
+      const contentBytes = await vscode.workspace.fs.readFile(agentsUri);
+      const content = Buffer.from(contentBytes).toString("utf-8");
+      if (!content.trim()) {
+        return undefined;
+      }
+      return {
+        path: this.getRelativePath(agentsUri.fsPath),
+        content,
+      };
+    } catch (error) {
+      return undefined;
+    }
   }
 
   /**
