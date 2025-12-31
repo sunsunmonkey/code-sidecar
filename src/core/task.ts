@@ -8,15 +8,22 @@ import { AgentWebviewProvider } from "../ui/AgentWebviewProvider";
 import { ToolExecutor } from "../tools";
 import { PromptBuilder } from "../managers/PromptBuilder";
 import { ContextCollector, ProjectContext } from "../managers/ContextCollector";
-import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
+import { ErrorHandler } from "../managers/ErrorHandler";
 import { ConversationHistoryManager } from "../managers";
-import {
-  AssistantMessageContent,
-  AssistantMessageParser,
-  TextContent,
-} from "./assistantMessage";
 import { TaskDiffTracker } from "./TaskDiffTracker";
 import { logger } from "code-sidecar-shared/utils/logger";
+import {
+  buildAssistantContent,
+  createAssistantMessageParser,
+  getAssistantDisplayText,
+  streamAssistantResponse,
+} from "./assistantStreaming";
+import {
+  formatToolResult,
+  hasAttemptCompletion,
+  ToolCallHandler,
+} from "./toolCallHandler";
+import { TaskErrorHandler } from "./taskErrorHandler";
 
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
@@ -36,6 +43,8 @@ export class Task {
   private context?: ProjectContext;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
+  private toolCallHandler: ToolCallHandler;
+  private taskErrorHandler: TaskErrorHandler;
   private contextWindowTokens: number;
   private displayMessage: string;
   private isCancelled = false;
@@ -68,6 +77,25 @@ export class Task {
     this.contextWindowTokens = contextWindowTokens || 0;
     this.displayMessage = displayMessage ?? message;
     this.diffTracker = new TaskDiffTracker(this.id);
+    this.toolCallHandler = new ToolCallHandler({
+      taskId: this.id,
+      toolExecutor: this.toolExecutor,
+      conversationHistoryManager: this.conversationHistoryManager,
+      publishToolCall: (toolCall) =>
+        this.provider.postMessageToWebview({ type: "tool_call", toolCall }),
+      isCancelled: () => this.isCancelled,
+    });
+    this.taskErrorHandler = new TaskErrorHandler({
+      errorHandler: this.errorHandler,
+      postMessage: (message) => this.provider.postMessageToWebview(message),
+      getContext: () => ({
+        taskId: this.id,
+        loopCount: this.loopCount,
+        displayMessage: this.displayMessage,
+      }),
+      retry: () => this.recursivelyMakeRequest(this.history),
+      completeTask: () => this.completeTask(),
+    });
   }
 
   /**
@@ -98,15 +126,15 @@ export class Task {
       // Save user message to history
       // TODO 这块的 history 和 展示的, 思考vscode workspace context
 
-    this.conversationHistoryManager.addMessage({
-      role: "user",
-      content: this.displayMessage,
-    });
-    logger.debug("save", this.displayMessage);
-    await this.recursivelyMakeRequest(this.history);
-  } catch (error) {
-    this.handleTaskError(error, "task_start");
-  }
+      this.conversationHistoryManager.addMessage({
+        role: "user",
+        content: this.displayMessage,
+      });
+      logger.debug("save", this.displayMessage);
+      await this.recursivelyMakeRequest(this.history);
+    } catch (error) {
+      await this.taskErrorHandler.handle(error, "task_start");
+    }
   }
 
   /**
@@ -158,7 +186,7 @@ export class Task {
 
       history = history.map((item) => {
         if (item.role === "tool_result") {
-          const content = this.formatToolResult(item.content as ToolResult);
+          const content = formatToolResult(item.content as ToolResult);
           return {
             role: "user",
             content,
@@ -175,137 +203,32 @@ export class Task {
         this.createAbortController().signal
       );
 
-      const parser = this.createAssistantMessageParser();
-      let assistantMessage = "";
-      let lastPublishedText = "";
-      let usage: TokenUsage | undefined;
-      let toolCallSequence = 0;
-
-      type ToolCallSnapshot = {
-        name: string;
-        partial: boolean;
-        paramKeys: string[];
-        paramSizes: Record<string, number>;
-      };
-
-      const toolCallSnapshots = new Map<string, ToolCallSnapshot>();
-
-      const getParamSize = (value: unknown): number => {
-        if (typeof value === "string") {
-          return value.length;
-        }
-        if (value === null || value === undefined) {
-          return 0;
-        }
-        return JSON.stringify(value)?.length ?? 0;
-      };
-
-      const buildToolCallSnapshot = (toolCall: ToolUse): ToolCallSnapshot => {
-        const paramEntries = Object.entries(toolCall.params);
-        const paramSizes: Record<string, number> = {};
-        for (const [key, value] of paramEntries) {
-          paramSizes[key] = getParamSize(value);
-        }
-
-        return {
-          name: toolCall.name,
-          partial: !!toolCall.partial,
-          paramKeys: paramEntries.map(([key]) => key),
-          paramSizes,
-        };
-      };
-
-      const hasToolCallChanged = (
-        previous: ToolCallSnapshot | undefined,
-        next: ToolCallSnapshot
-      ): boolean => {
-        if (!previous) {
-          return true;
-        }
-        if (previous.name !== next.name || previous.partial !== next.partial) {
-          return true;
-        }
-        if (previous.paramKeys.length !== next.paramKeys.length) {
-          return true;
-        }
-        for (const key of next.paramKeys) {
-          if (previous.paramSizes[key] !== next.paramSizes[key]) {
-            return true;
-          }
-        }
-        return false;
-      };
-
-      const getToolCallId = (toolCall: ToolUse): string => {
-        if (!toolCall.id) {
-          toolCall.id = `tool-${this.id}-${this.loopCount}-${toolCallSequence++}`;
-        }
-        return toolCall.id;
-      };
-
-      const publishToolCallUpdates = (
-        contentBlocks: AssistantMessageContent[]
-      ): void => {
-        const toolCalls = contentBlocks.filter(
-          (block): block is ToolUse => block.type === "tool_use"
-        );
-
-        if (toolCalls.length === 0) {
-          return;
-        }
-
-        for (const toolCall of toolCalls) {
-          const toolCallId = getToolCallId(toolCall);
-          const snapshot = buildToolCallSnapshot(toolCall);
-          const previousSnapshot = toolCallSnapshots.get(toolCallId);
-
-          if (!hasToolCallChanged(previousSnapshot, snapshot)) {
-            continue;
-          }
-
-          toolCallSnapshots.set(toolCallId, snapshot);
-          this.provider.postMessageToWebview({
-            type: "tool_call",
-            toolCall: toolCall,
-          });
-        }
-      };
-      for await (const chunk of stream) {
-        if (this.isCancelled) {
-          break;
-        }
-        if (chunk.type === "content") {
-          assistantMessage += chunk.content;
-          const contentBlocks = parser.processChunk(chunk.content);
-          publishToolCallUpdates(contentBlocks);
-          const displayText = this.getAssistantDisplayText(contentBlocks);
-          if (displayText !== lastPublishedText) {
-            lastPublishedText = displayText;
-            this.provider.postMessageToWebview({
-              type: "stream_chunk",
-              content: displayText,
-              isStreaming: true,
-            });
-          }
-        } else if (chunk.type === "usage") {
-          usage = chunk.usage;
-        }
-      }
+      const parser = createAssistantMessageParser(this.toolExecutor);
+      const { assistantMessage, contentBlocks, usage } =
+        await streamAssistantResponse({
+          stream,
+          parser,
+          isCancelled: () => this.isCancelled,
+          taskId: this.id,
+          loopCount: this.loopCount,
+          callbacks: {
+            onStreamChunk: (content, isStreaming) => {
+              this.provider.postMessageToWebview({
+                type: "stream_chunk",
+                content,
+                isStreaming,
+              });
+            },
+            onToolCall: (toolCall) => {
+              this.provider.postMessageToWebview({
+                type: "tool_call",
+                toolCall: toolCall,
+              });
+            },
+          },
+        });
 
       this.abortController = null;
-
-      parser.finalizeContentBlocks();
-
-      const finalizedBlocks = parser.getContentBlocks();
-      const finalizedText = this.getAssistantDisplayText(finalizedBlocks);
-      const finalDisplayText = finalizedText || lastPublishedText;
-
-      // completely stream
-      this.provider.postMessageToWebview({
-        type: "stream_chunk",
-        content: finalDisplayText,
-        isStreaming: false,
-      });
 
       if (usage) {
         this.publishTokenUsage(usage);
@@ -316,8 +239,8 @@ export class Task {
       );
 
       // Parse assistant message for tool calls
-      const assistantContent = this.buildAssistantContent(
-        finalizedBlocks,
+      const assistantContent = buildAssistantContent(
+        contentBlocks,
         assistantMessage
       );
 
@@ -329,7 +252,7 @@ export class Task {
       this.history.push(assistantHistoryItem);
 
       // Save assistant message to display history (tool XML stripped)
-      const assistantDisplayContent = this.getAssistantDisplayText(
+      const assistantDisplayContent = getAssistantDisplayText(
         assistantContent
       );
       if (assistantDisplayContent) {
@@ -364,10 +287,10 @@ export class Task {
       }
 
       // Check if attempt_completion was called
-      const hasCompletion = this.hasAttemptCompletion(toolCalls);
+      const hasCompletion = hasAttemptCompletion(toolCalls);
 
       // Execute tool calls and get results
-      const toolResults = await this.handleToolCalls(toolCalls);
+      const toolResults = await this.toolCallHandler.executeToolCalls(toolCalls);
 
       // Add tool results to history as user messages
       for (const result of toolResults) {
@@ -408,123 +331,8 @@ export class Task {
       // Continue the ReAct loop
       await this.recursivelyMakeRequest(this.history);
     } catch (error) {
-      await this.handleTaskError(error, `react_loop_${this.loopCount}`);
+      await this.taskErrorHandler.handle(error, `react_loop_${this.loopCount}`);
     }
-  }
-
-  /**
-   * Build parsed assistant content from the streaming parser,
-   * falling back to treating the response as plain text if needed.
-   */
-  private buildAssistantContent(
-    parsedBlocks: AssistantMessageContent[],
-    assistantMessage: string
-  ): AssistantMessageContent[] {
-    if (parsedBlocks.length > 0) {
-      return parsedBlocks;
-    }
-
-    return [
-      {
-        type: "text",
-        content: assistantMessage.trim(),
-        partial: false,
-      },
-    ];
-  }
-
-  private getAssistantDisplayText(
-    contentBlocks: AssistantMessageContent[]
-  ): string {
-    const textBlocks = contentBlocks.filter(
-      (block): block is TextContent => block.type === "text"
-    );
-
-    if (textBlocks.length === 0) {
-      return "";
-    }
-
-    return textBlocks
-      .map((block) => block.content)
-      .filter((content) => content.trim().length > 0)
-      .join("\n\n")
-      .trim();
-  }
-
-  /**
-   * Create a streaming parser wired to the registered tool names and parameters.
-   */
-  private createAssistantMessageParser(): AssistantMessageParser {
-    const toolNames = this.toolExecutor.getToolNames();
-    const paramNames = this.getAllToolParameterNames(toolNames);
-    return new AssistantMessageParser(toolNames, paramNames);
-  }
-
-  private getAllToolParameterNames(toolNames: string[]): string[] {
-    const paramNames = new Set<string>();
-
-    for (const toolName of toolNames) {
-      const tool = this.toolExecutor.getTool(toolName);
-      if (tool?.parameters) {
-        for (const param of tool.parameters) {
-          paramNames.add(param.name);
-        }
-      }
-    }
-
-    return Array.from(paramNames);
-  }
-
-  /**
-   * Handle multiple tool calls
-   */
-  private async handleToolCalls(toolCalls: ToolUse[]): Promise<ToolResult[]> {
-    const results: ToolResult[] = [];
-
-    for (const toolCall of toolCalls) {
-      if (this.isCancelled) {
-        break;
-      }
-      logger.debug(`[Task ${this.id}] Executing tool: ${toolCall.name}`);
-
-      this.provider.postMessageToWebview({
-        type: "tool_call",
-        toolCall: toolCall,
-      });
-
-      this.conversationHistoryManager.addMessage({
-        role: "system",
-        content: "",
-        toolCalls: [toolCall],
-      });
-
-      // Execute tool using ToolExecutor
-      const result = await this.toolExecutor.executeTool(toolCall);
-      if (toolCall.id) {
-        result.tool_call_id = toolCall.id;
-      }
-
-      results.push(result);
-    }
-
-    return results;
-  }
-
-  /**
-   * Check if any tool call is attempt_completion
-   */
-  private hasAttemptCompletion(toolCalls: ToolUse[]): boolean {
-    return toolCalls.some((toolCall) => toolCall.name === "attempt_completion");
-  }
-
-  /**
-   * Format tool result for adding to conversation history
-   */
-  private formatToolResult(result: ToolResult): string {
-    if (result.is_error) {
-      return `[TOOL ERROR: ${result.tool_name}]\n${result.content}`;
-    }
-    return `[TOOL RESULT: ${result.tool_name}]\n${result.content}`;
   }
 
   /**
@@ -630,68 +438,6 @@ export class Task {
         availableTokens: this.contextWindowTokens,
       },
     });
-  }
-
-  /**
-   * Handle task errors with error handler
-   */
-  private async handleTaskError(
-    error: unknown,
-    operation: string
-  ): Promise<void> {
-    const errorContext: ErrorContext = {
-      operation,
-      timestamp: new Date(),
-      userMessage: this.displayMessage,
-      additionalInfo: {
-        taskId: this.id,
-        loopCount: this.loopCount,
-      },
-    };
-
-    // Handle the error and get response
-    const errorResponse = this.errorHandler.handleError(error, errorContext);
-
-    // Display error message to user (Requirement 12.1, 12.2, 12.3)
-    this.provider.postMessageToWebview({
-      type: "error",
-      message: errorResponse.userMessage,
-    });
-
-    // Attempt recovery if error is retryable (Requirement 12.4, 12.5)
-    if (errorResponse.shouldRetry) {
-      const canRecover = await this.errorHandler.attemptRecovery(
-        error,
-        errorContext
-      );
-
-      if (canRecover) {
-        logger.debug(`[Task ${this.id}] Attempting recovery for ${operation}`);
-
-        // For network errors, retry the request
-        if (this.errorHandler.isRetryable(error)) {
-          // Wait a bit before retrying
-          await new Promise((resolve) => setTimeout(resolve, 1000));
-
-          // Retry the request
-          try {
-            await this.recursivelyMakeRequest(this.history);
-
-            // Reset retry attempts on success
-            this.errorHandler.resetRetryAttempts(operation);
-            return;
-          } catch (retryError) {
-            // If retry fails, handle it again
-            await this.handleTaskError(retryError, operation);
-            return;
-          }
-        }
-      }
-    }
-
-    // If no recovery or recovery failed, end the task
-    logger.debug(`[Task ${this.id}] Task failed due to error in ${operation}`);
-    this.completeTask();
   }
 
   private createAbortController(): AbortController {

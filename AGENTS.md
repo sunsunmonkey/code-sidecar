@@ -45,6 +45,7 @@
 - **No backward compatibility** - Break old formats freely
 - When there is duplicated logic or similar code blocks, consider extracting them into a shared module or separate file.
 - If the content of a file is too large or contains multiple responsibilities, the code MUST be split into multiple smaller files, each with a clear, single responsibility and an explicitly stated filename.
+- If a single source file exceeds 500 lines, consider refactoring it into smaller, well-defined modules to improve readability, maintainability, and testability.
 - Prefer leveraging well-maintained libraries or external packages if they can simplify the implementation and improve code maintainability.
 
 ## Page Design Language

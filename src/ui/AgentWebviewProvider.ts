@@ -1,6 +1,5 @@
 import * as vscode from "vscode";
 import { Task } from "../core/task";
-import { HistoryItem } from "../core/apiHandler";
 import { buildInitPrompt, parseInitCommand } from "../core/initCommand";
 
 import {
@@ -26,9 +25,10 @@ import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { ErrorHandler } from "../managers/ErrorHandler";
 import { logger } from "code-sidecar-shared/utils/logger";
+import { ConversationController } from "./ConversationController";
 import { DiffWebviewPanel } from "./DiffWebviewPanel";
+import { MessageHandlerRegistry } from "./MessageHandlerRegistry";
 import type {
-  DisplayMessage,
   AgentConfiguration,
   UserMessage,
   WebviewMessage,
@@ -48,6 +48,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private contextCollector: ContextCollector;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
+  private conversationController: ConversationController;
+  private messageHandlerRegistry: MessageHandlerRegistry;
   private apiConfiguration: ApiConfiguration = {
     model: "",
     apiKey: "",
@@ -81,6 +83,15 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     // Initialize conversation history manager
     this.conversationHistoryManager = new ConversationHistoryManager(context);
+
+    this.conversationController = new ConversationController({
+      conversationHistoryManager: this.conversationHistoryManager,
+      postMessage: (message) => this.postMessageToWebview(message),
+      cancelCurrentTask: () => this.cancelCurrentTask(),
+    });
+
+    this.messageHandlerRegistry = new MessageHandlerRegistry();
+    this.registerMessageHandlers();
 
     // Load configuration and set up change listener
     this.initializeConfiguration();
@@ -199,44 +210,63 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     });
   }
 
-  /**
-   * Handle messages from webview
-   */
-  private readonly messageHandlers: {
-    [K in UserMessage["type"]]?: (
-      message: Extract<UserMessage, { type: K }>
-    ) => Promise<void> | void;
-  } = {
-    mode_change: (message) => this.handleModeChange(message.mode),
-    clear_conversation: () => this.handleClearConversation(),
-    clear_conversation_history: () => this.handleClearConversationHistory(),
-    get_conversation_history: () => this.handleGetConversationHistory(),
-    new_conversation: () => this.handleNewConversation(),
-    get_conversation_list: () => this.handleGetConversationList(),
-    switch_conversation: (message) =>
-      this.handleSwitchConversation(message.conversationId),
-    delete_conversation: (message) =>
-      this.handleDeleteConversation(message.conversationId),
-    get_configuration: () => this.handleGetConfiguration(),
-    open_diff_panel: (message) =>
-      this.handleOpenDiffPanel(message.diff, message.filePath),
-    save_configuration: (message) =>
-      this.handleSaveConfiguration(message.config),
-    test_connection: (message) => this.handleTestConnection(message.apiConfig),
-    permission_response: (message) =>
+  private registerMessageHandlers(): void {
+    this.messageHandlerRegistry.register("mode_change", (message) =>
+      this.handleModeChange(message.mode)
+    );
+    this.messageHandlerRegistry.register("clear_conversation", () =>
+      this.conversationController.handleClearConversation()
+    );
+    this.messageHandlerRegistry.register("clear_conversation_history", () =>
+      this.conversationController.handleClearConversationHistory()
+    );
+    this.messageHandlerRegistry.register("get_conversation_history", () =>
+      this.conversationController.handleGetConversationHistory()
+    );
+    this.messageHandlerRegistry.register("new_conversation", () =>
+      this.conversationController.handleNewConversation()
+    );
+    this.messageHandlerRegistry.register("get_conversation_list", () =>
+      this.conversationController.handleGetConversationList()
+    );
+    this.messageHandlerRegistry.register("switch_conversation", (message) =>
+      this.conversationController.handleSwitchConversation(
+        message.conversationId
+      )
+    );
+    this.messageHandlerRegistry.register("delete_conversation", (message) =>
+      this.conversationController.handleDeleteConversation(
+        message.conversationId
+      )
+    );
+    this.messageHandlerRegistry.register("get_configuration", () =>
+      this.handleGetConfiguration()
+    );
+    this.messageHandlerRegistry.register("open_diff_panel", (message) =>
+      this.handleOpenDiffPanel(message.diff, message.filePath)
+    );
+    this.messageHandlerRegistry.register("save_configuration", (message) =>
+      this.handleSaveConfiguration(message.config)
+    );
+    this.messageHandlerRegistry.register("test_connection", (message) =>
+      this.handleTestConnection(message.apiConfig)
+    );
+    this.messageHandlerRegistry.register("permission_response", (message) =>
       this.permissionManager.handlePermissionResponse(
         message.requestId,
         message.approved
-      ),
-    cancel_task: () => this.cancelCurrentTask(),
-    user_message: (message) => this.handleUserMessage(message),
-  };
+      )
+    );
+    this.messageHandlerRegistry.register("cancel_task", () =>
+      this.cancelCurrentTask()
+    );
+    this.messageHandlerRegistry.register("user_message", (message) =>
+      this.handleUserMessage(message)
+    );
+  }
 
   private async handleMessage(message: UserMessage): Promise<void> {
-    const handler = this.messageHandlers[message.type];
-    if (handler) {
-      await handler(message as never);
-    }
+    await this.messageHandlerRegistry.handle(message);
   }
 
   private async handleUserMessage(
@@ -310,314 +340,11 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  /**
-   * Handle clear conversation request
-   */
-  private handleClearConversation(): void {
-    try {
-      this.cancelCurrentTask();
-      this.conversationHistoryManager.clearConversation();
-
-      // Notify webview that conversation was cleared
-      this.postMessageToWebview({
-        type: "conversation_cleared",
-      });
-
-      logger.debug("[AgentWebviewProvider] Conversation cleared");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to clear conversation:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to clear conversation: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
-   * Handle clear conversation history request
-   */
-  private handleClearConversationHistory(): void {
-    try {
-      this.cancelCurrentTask();
-      this.conversationHistoryManager.clearAllConversations();
-
-      this.postMessageToWebview({
-        type: "conversation_history",
-        messages: [],
-      });
-
-      this.postMessageToWebview({
-        type: "conversation_cleared",
-      });
-
-      this.handleGetConversationList();
-
-      logger.debug("[AgentWebviewProvider] Conversation history cleared");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to clear conversation history:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to clear conversation history: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
-   * Handle get conversation history request
-   */
-  private handleGetConversationHistory(): void {
-    try {
-      const messages = this.conversationHistoryManager.getMessages();
-
-      // Convert HistoryItem[] to DisplayMessage format
-      const displayMessages: DisplayMessage[] = messages.map(
-        (msg: HistoryItem, index: number) => {
-          const content =
-            typeof msg.content === "string" ? msg.content : msg.content.content;
-          return {
-            ...msg,
-            role: msg.role as DisplayMessage["role"],
-            content,
-            id: `msg-${Date.now()}-${index}`,
-            timestamp: new Date(),
-          };
-        }
-      );
-      logger.debug(displayMessages);
-      // Send conversation history to webview
-      this.postMessageToWebview({
-        type: "conversation_history",
-        messages: displayMessages,
-      });
-
-      logger.debug(
-        `[AgentWebviewProvider] Sent ${displayMessages.length} messages to webview`
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to get conversation history:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to get conversation history: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
-   * Handle new conversation request
-   */
-  private handleNewConversation(): void {
-    try {
-      this.cancelCurrentTask();
-      this.conversationHistoryManager.clearConversation();
-
-      // Send empty conversation history to webview
-      this.postMessageToWebview({
-        type: "conversation_history",
-        messages: [],
-      });
-
-      this.postMessageToWebview({
-        type: "conversation_cleared",
-      });
-
-      logger.debug("[AgentWebviewProvider] New conversation started");
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to start new conversation:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to start new conversation: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
-   * Handle get conversation list request
-   */
-  private handleGetConversationList(): void {
-    try {
-      const conversations =
-        this.conversationHistoryManager.getConversationHistory();
-      const currentId =
-        this.conversationHistoryManager.getCurrentConversationId();
-      logger.debug(conversations);
-      // Format conversations for display
-      const formattedConversations = conversations.map((conv) => ({
-        id: conv.id,
-        timestamp: conv.timestamp,
-        messageCount: conv.messages.length,
-        preview: this.getConversationPreview(conv.messages),
-        isCurrent: conv.id === currentId,
-      }));
-
-      logger.debug(
-        "🚀 ~ AgentWebviewProvider ~ handleGetConversationList ~ formattedConversations:",
-        formattedConversations
-      );
-
-      // Sort by timestamp, newest first
-      formattedConversations.sort(
-        (a, b) =>
-          new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime()
-      );
-
-      this.postMessageToWebview({
-        type: "conversation_list",
-        conversations: formattedConversations,
-      });
-
-      logger.debug(
-        `[AgentWebviewProvider] Sent ${formattedConversations.length} conversations to webview`
-      );
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to get conversation list:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to get conversation list: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
-   * Handle switch conversation request
-   */
-  private handleSwitchConversation(conversationId: string): void {
-    try {
-      this.cancelCurrentTask();
-      const success =
-        this.conversationHistoryManager.restoreConversation(conversationId);
-
-      if (success) {
-        // Send the conversation messages to webview
-        this.handleGetConversationHistory();
-
-        logger.debug(
-          `[AgentWebviewProvider] Switched to conversation: ${conversationId}`
-        );
-      } else {
-        this.postMessageToWebview({
-          type: "error",
-          message: `Failed to switch to conversation: ${conversationId}`,
-        });
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to switch conversation:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to switch conversation: ${errorMessage}`,
-      });
-    }
-  }
-
-  /**
-   * Handle delete conversation request
-   */
-  private handleDeleteConversation(conversationId: string): void {
-    logger.debug(
-      `[AgentWebviewProvider] Received delete request for: ${conversationId}`
-    );
-    try {
-      const currentConversationId =
-        this.conversationHistoryManager.getCurrentConversationId();
-      const isCurrentConversation = currentConversationId === conversationId;
-
-      if (isCurrentConversation) {
-        this.cancelCurrentTask();
-      }
-      const success =
-        this.conversationHistoryManager.deleteConversation(conversationId);
-
-      logger.debug(`[AgentWebviewProvider] Delete result: ${success}`);
-
-      if (success) {
-        if (isCurrentConversation) {
-          this.conversationHistoryManager.startNewConversation();
-          this.postMessageToWebview({ type: "conversation_cleared" });
-        }
-
-        this.postMessageToWebview({
-          type: "conversation_deleted",
-          conversationId: conversationId,
-        });
-
-        // Refresh conversation list
-        this.handleGetConversationList();
-
-        logger.debug(
-          `[AgentWebviewProvider] Deleted conversation: ${conversationId}`
-        );
-      } else {
-        logger.debug(
-          `[AgentWebviewProvider] Failed to delete conversation: ${conversationId}`
-        );
-        this.postMessageToWebview({
-          type: "error",
-          message: `Failed to delete conversation: ${conversationId}`,
-        });
-      }
-    } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      logger.debug(
-        "[AgentWebviewProvider] Failed to delete conversation:",
-        error
-      );
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to delete conversation: ${errorMessage}`,
-      });
-    }
-  }
-
   private handleOpenDiffPanel(
     diff: Extract<UserMessage, { type: "open_diff_panel" }>["diff"],
     filePath?: string
   ): void {
     DiffWebviewPanel.show(diff, filePath);
-  }
-
-  /**
-   * Get a preview of the conversation (first user message)
-   */
-  private getConversationPreview(messages: any[]): string {
-    const firstUserMessage = messages.find((msg) => msg.role === "user");
-    if (firstUserMessage) {
-      const content =
-        typeof firstUserMessage.content === "string"
-          ? firstUserMessage.content
-          : JSON.stringify(firstUserMessage.content);
-      return content.length > 100 ? content.substring(0, 100) + "..." : content;
-    }
-    return "Empty conversation";
   }
 
   /**
