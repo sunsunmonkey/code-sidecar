@@ -3,7 +3,7 @@ import { MessageList } from "../components/MessageList";
 import { InputBox } from "../components/InputBox";
 import { ModeSelector } from "../components/ModeSelector";
 import { ConversationList } from "../components/ConversationList";
-import { Settings2, Sparkles } from "lucide-react";
+import { Settings2, Motorbike } from "lucide-react";
 import type {
   DisplayMessage,
   WebviewMessage,
@@ -96,7 +96,6 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
         setTokenUsage(message.usage);
         break;
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleStreamChunk = (content: string, isStreaming: boolean) => {
@@ -164,8 +163,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
       if (toolCallId) {
         existingIndex = prev.findIndex(
           (msg) =>
-            msg.toolCalls &&
-            msg.toolCalls.some((tc) => tc.id === toolCallId)
+            msg.toolCalls && msg.toolCalls.some((tc) => tc.id === toolCallId)
         );
       } else {
         for (let i = prev.length - 1; i >= 0; i--) {
@@ -427,7 +425,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
         <header className="flex items-center justify-between gap-3 px-4 py-2.5 bg-[var(--vscode-sideBarSectionHeader-background)] shrink-0">
           <div className="flex items-center gap-3">
             <div className="flex items-center justify-center w-9 h-9 rounded-md bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)]">
-              <Sparkles size={18} strokeWidth={2} />
+              <Motorbike size={18} strokeWidth={2} />
             </div>
             <div className="flex flex-col leading-tight">
               <span className="text-sm font-semibold text-[var(--vscode-foreground)] uppercase tracking-wide">
@@ -490,4 +488,3 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
     </div>
   );
 };
-
