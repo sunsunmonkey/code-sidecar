@@ -6,15 +6,31 @@ import type { OperationRecord } from "./operations";
 import type { PermissionRequestWithId } from "./permissions";
 import type { TaskDiff } from "./diff";
 import type { ToolResult, ToolUse } from "./tools";
+import type { MCPServerConfig, MCPServerState, MCPMarketItem } from "./mcp";
 
 export type { ApiConfiguration } from "./api";
-export type { ConversationSummary, DisplayMessage, MessageRole } from "./conversation";
+export type {
+  ConversationSummary,
+  DisplayMessage,
+  MessageRole,
+} from "./conversation";
 export type { AgentConfiguration, ValidationErrors } from "./config";
 export type { TaskDiff } from "./diff";
 export type { WorkMode } from "./modes";
 export type { OperationRecord, OperationType } from "./operations";
 export type { PermissionRequest, PermissionRequestWithId } from "./permissions";
 export type { ToolResult, ToolUse } from "./tools";
+export type {
+  MCPServerConfig,
+  MCPServerState,
+  MCPMarketItem,
+  MCPToolDefinition,
+  MCPConnectionStatus,
+  MCPCategory,
+  MCPConfiguration,
+  MCPMessage,
+  MCPResponse,
+} from "./mcp";
 
 export interface TokenUsageSnapshot {
   totalTokens: number;
@@ -68,7 +84,18 @@ export type WebviewMessage =
   | { type: "validation_error"; errors: ValidationErrors }
   | { type: "token_usage"; usage: TokenUsageSnapshot }
   | { type: "permission_request"; request: PermissionRequestWithId }
-  | { type: "set_input_value"; value: string };
+  | { type: "set_input_value"; value: string }
+  | {
+      type: "mcp_servers_list";
+      servers: MCPServerConfig[];
+      states: MCPServerState[];
+    }
+  | { type: "mcp_server_added"; server: MCPServerConfig }
+  | { type: "mcp_server_updated"; server: MCPServerConfig }
+  | { type: "mcp_server_removed"; serverId: string }
+  | { type: "mcp_server_state_changed"; state: MCPServerState }
+  | { type: "mcp_market_list"; items: MCPMarketItem[] }
+  | { type: "mcp_error"; message: string };
 
 export type UserMessage =
   | { type: "user_message"; content: string }
@@ -87,4 +114,12 @@ export type UserMessage =
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: AgentConfiguration }
   | { type: "test_connection"; apiConfig: ApiConfiguration }
-  | { type: "permission_response"; requestId: string; approved: boolean };
+  | { type: "permission_response"; requestId: string; approved: boolean }
+  | { type: "mcp_get_servers" }
+  | { type: "mcp_add_server"; server: Omit<MCPServerConfig, "id"> }
+  | { type: "mcp_update_server"; server: MCPServerConfig }
+  | { type: "mcp_remove_server"; serverId: string }
+  | { type: "mcp_connect_server"; serverId: string }
+  | { type: "mcp_disconnect_server"; serverId: string }
+  | { type: "mcp_get_market" }
+  | { type: "mcp_install_from_market"; itemId: string };

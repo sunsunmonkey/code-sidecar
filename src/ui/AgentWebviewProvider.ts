@@ -15,7 +15,9 @@ import {
   ExecuteCommandTool,
   GetDiagnosticsTool,
   ListCodeDefinitionNamesTool,
+  MCPToolRegistry,
 } from "../tools";
+import { MCPManager } from "../core/mcp";
 import { ModeManager } from "../managers/ModeManager";
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
 import type { WorkMode } from "code-sidecar-shared/types/modes";
@@ -32,6 +34,7 @@ import type {
   AgentConfiguration,
   UserMessage,
   WebviewMessage,
+  MCPServerConfig,
 } from "code-sidecar-shared/types/messages";
 
 /**
@@ -48,6 +51,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private contextCollector: ContextCollector;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
+  private mcpManager: MCPManager;
+  private mcpToolRegistry: MCPToolRegistry;
   private apiConfiguration: ApiConfiguration = {
     model: "",
     apiKey: "",
@@ -64,6 +69,10 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     // Initialize error handler
     this.errorHandler = new ErrorHandler();
+
+    // Initialize MCP Manager
+    this.mcpManager = new MCPManager(context);
+    this.mcpToolRegistry = new MCPToolRegistry(this.mcpManager);
 
     // Initialize tool executor and register default tools
     this.toolExecutor = new ToolExecutor(
@@ -84,6 +93,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     // Load configuration and set up change listener
     this.initializeConfiguration();
+
+    // Initialize MCP
+    this.initializeMCP();
   }
 
   /**
@@ -146,6 +158,58 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.toolExecutor.registerTool(new ListCodeDefinitionNamesTool());
 
     logger.debug(`Registered ${this.toolExecutor.getToolCount()} tools`);
+  }
+
+  /**
+   * Initialize MCP Manager and set up event handlers
+   */
+  private async initializeMCP(): Promise<void> {
+    try {
+      // Set up state change callback
+      this.mcpManager.setOnStateChange((state) => {
+        this.postMessageToWebview({
+          type: "mcp_server_state_changed",
+          state,
+        });
+
+        // Refresh MCP tools when server state changes
+        if (state.status === "connected" || state.status === "disconnected") {
+          this.refreshMCPTools();
+        }
+      });
+
+      // Initialize MCP manager (loads configs and auto-connects)
+      await this.mcpManager.initialize();
+
+      // Initial tool refresh
+      this.refreshMCPTools();
+
+      logger.debug("[AgentWebviewProvider] MCP initialized");
+    } catch (error) {
+      logger.debug("[AgentWebviewProvider] Failed to initialize MCP:", error);
+    }
+  }
+
+  /**
+   * Refresh MCP tools in tool executor
+   */
+  private refreshMCPTools(): void {
+    // Unregister old MCP tools
+    for (const toolName of this.toolExecutor.getToolNames()) {
+      if (toolName.startsWith("mcp_")) {
+        this.toolExecutor.unregisterTool(toolName);
+      }
+    }
+
+    // Register new MCP tools
+    const mcpTools = this.mcpToolRegistry.refreshTools();
+    for (const tool of mcpTools) {
+      this.toolExecutor.registerTool(tool);
+    }
+
+    logger.debug(
+      `[AgentWebviewProvider] Refreshed ${mcpTools.length} MCP tools`
+    );
   }
 
   resolveWebviewView(
@@ -230,6 +294,19 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       ),
     cancel_task: () => this.cancelCurrentTask(),
     user_message: (message) => this.handleUserMessage(message),
+    // MCP handlers
+    mcp_get_servers: () => this.handleMCPGetServers(),
+    mcp_add_server: (message) => this.handleMCPAddServer(message.server),
+    mcp_update_server: (message) => this.handleMCPUpdateServer(message.server),
+    mcp_remove_server: (message) =>
+      this.handleMCPRemoveServer(message.serverId),
+    mcp_connect_server: (message) =>
+      this.handleMCPConnectServer(message.serverId),
+    mcp_disconnect_server: (message) =>
+      this.handleMCPDisconnectServer(message.serverId),
+    mcp_get_market: () => this.handleMCPGetMarket(),
+    mcp_install_from_market: (message) =>
+      this.handleMCPInstallFromMarket(message.itemId),
   };
 
   private async handleMessage(message: UserMessage): Promise<void> {
@@ -823,6 +900,136 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
+  // ==================== MCP Handlers ====================
+
+  /**
+   * Handle get MCP servers request
+   */
+  private handleMCPGetServers(): void {
+    this.postMessageToWebview({
+      type: "mcp_servers_list",
+      servers: this.mcpManager.getServers(),
+      states: this.mcpManager.getServerStates(),
+    });
+  }
+
+  /**
+   * Handle add MCP server request
+   */
+  private async handleMCPAddServer(
+    server: Omit<MCPServerConfig, "id">
+  ): Promise<void> {
+    try {
+      const newServer = await this.mcpManager.addServer(server);
+      this.postMessageToWebview({
+        type: "mcp_server_added",
+        server: newServer,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.postMessageToWebview({
+        type: "mcp_error",
+        message,
+      });
+    }
+  }
+
+  /**
+   * Handle update MCP server request
+   */
+  private async handleMCPUpdateServer(server: MCPServerConfig): Promise<void> {
+    try {
+      await this.mcpManager.updateServer(server);
+      this.postMessageToWebview({
+        type: "mcp_server_updated",
+        server,
+      });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.postMessageToWebview({
+        type: "mcp_error",
+        message,
+      });
+    }
+  }
+
+  /**
+   * Handle remove MCP server request
+   */
+  private async handleMCPRemoveServer(serverId: string): Promise<void> {
+    try {
+      await this.mcpManager.removeServer(serverId);
+      this.postMessageToWebview({
+        type: "mcp_server_removed",
+        serverId,
+      });
+      // Refresh tools after removing server
+      this.refreshMCPTools();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.postMessageToWebview({
+        type: "mcp_error",
+        message,
+      });
+    }
+  }
+
+  /**
+   * Handle connect MCP server request
+   */
+  private async handleMCPConnectServer(serverId: string): Promise<void> {
+    try {
+      await this.mcpManager.connectServer(serverId);
+      // State change will be handled by the callback
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.postMessageToWebview({
+        type: "mcp_error",
+        message: `Failed to connect: ${message}`,
+      });
+    }
+  }
+
+  /**
+   * Handle disconnect MCP server request
+   */
+  private handleMCPDisconnectServer(serverId: string): void {
+    this.mcpManager.disconnectServer(serverId);
+    // State change will be handled by the callback
+  }
+
+  /**
+   * Handle get MCP market request
+   */
+  private handleMCPGetMarket(): void {
+    this.postMessageToWebview({
+      type: "mcp_market_list",
+      items: this.mcpManager.getMarketItems(),
+    });
+  }
+
+  /**
+   * Handle install from MCP market request
+   */
+  private async handleMCPInstallFromMarket(itemId: string): Promise<void> {
+    try {
+      const newServer = await this.mcpManager.installFromMarket(itemId);
+      this.postMessageToWebview({
+        type: "mcp_server_added",
+        server: newServer,
+      });
+      vscode.window.showInformationMessage(
+        `MCP server "${newServer.name}" installed successfully`
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      this.postMessageToWebview({
+        type: "mcp_error",
+        message,
+      });
+    }
+  }
+
   /**
    * Set input value in webview
    */
@@ -833,4 +1040,3 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     });
   }
 }
-

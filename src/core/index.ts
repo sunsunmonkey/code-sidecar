@@ -8,3 +8,4 @@ export {
   TextContent,
 } from "./assistantMessage";
 export { ApiHandler, HistoryItem } from "./apiHandler";
+export { MCPClient, MCPManager } from "./mcp";

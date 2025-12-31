@@ -3,7 +3,7 @@ import { MessageList } from "../components/MessageList";
 import { InputBox } from "../components/InputBox";
 import { ModeSelector } from "../components/ModeSelector";
 import { ConversationList } from "../components/ConversationList";
-import { Settings2, Sparkles } from "lucide-react";
+import { Settings2, Sparkles, Blocks } from "lucide-react";
 import type {
   DisplayMessage,
   WebviewMessage,
@@ -22,9 +22,14 @@ import { ContextPanel } from "../components/ContextPanel";
 interface ChatPageProps {
   isActive: boolean;
   onOpenConfig: () => void;
+  onOpenMCP: () => void;
 }
 
-export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
+export const ChatPage = ({
+  isActive,
+  onOpenConfig,
+  onOpenMCP,
+}: ChatPageProps) => {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentMode, setCurrentMode] = useState<WorkMode>("code");
@@ -164,8 +169,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
       if (toolCallId) {
         existingIndex = prev.findIndex(
           (msg) =>
-            msg.toolCalls &&
-            msg.toolCalls.some((tc) => tc.id === toolCallId)
+            msg.toolCalls && msg.toolCalls.some((tc) => tc.id === toolCallId)
         );
       } else {
         for (let i = prev.length - 1; i >= 0; i--) {
@@ -450,6 +454,14 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
             />
             <button
               className="bg-transparent text-[var(--vscode-button-foreground)] px-2.5 py-1.5 cursor-pointer rounded-sm text-sm transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"
+              onClick={onOpenMCP}
+              title="MCP Servers"
+              aria-label="MCP Servers"
+            >
+              <Blocks size={16} strokeWidth={2} />
+            </button>
+            <button
+              className="bg-transparent text-[var(--vscode-button-foreground)] px-2.5 py-1.5 cursor-pointer rounded-sm text-sm transition-colors hover:bg-[var(--vscode-button-hoverBackground)]"
               onClick={onOpenConfig}
               title="Open Configuration"
               aria-label="Open configuration"
@@ -490,4 +502,3 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
     </div>
   );
 };
-
