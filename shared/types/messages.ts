@@ -1,6 +1,7 @@
 import type { ApiConfiguration } from "./api";
 import type { ConversationSummary, DisplayMessage } from "./conversation";
 import type { AgentConfiguration, ValidationErrors } from "./config";
+import type { ErrorPayload } from "./errors";
 import type { WorkMode } from "./modes";
 import type { OperationRecord } from "./operations";
 import type { PermissionRequestWithId } from "./permissions";
@@ -10,6 +11,7 @@ import type { ToolResult, ToolUse } from "./tools";
 export type { ApiConfiguration } from "./api";
 export type { ConversationSummary, DisplayMessage, MessageRole } from "./conversation";
 export type { AgentConfiguration, ValidationErrors } from "./config";
+export type { ErrorPayload, ErrorType } from "./errors";
 export type { TaskDiff } from "./diff";
 export type { WorkMode } from "./modes";
 export type { OperationRecord, OperationType } from "./operations";
@@ -45,7 +47,7 @@ export type WebviewMessage =
   | { type: "tool_call"; toolCall: ToolUse }
   | { type: "tool_result"; content: ToolResult }
   | { type: "task_diff"; diff: TaskDiff }
-  | { type: "error"; message: string }
+  | { type: "error"; error: ErrorPayload }
   | { type: "task_complete" }
   | { type: "mode_changed"; mode: WorkMode }
   | { type: "conversation_cleared" }

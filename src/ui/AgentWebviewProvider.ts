@@ -23,7 +23,7 @@ import { PermissionManager } from "../managers/PermissionManager";
 import { ContextCollector } from "../managers/ContextCollector";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
-import { ErrorHandler } from "../managers/ErrorHandler";
+import { AppError, ErrorHandler } from "../managers";
 import { logger } from "code-sidecar-shared/utils/logger";
 import { ConversationController } from "./ConversationController";
 import { DiffWebviewPanel } from "./DiffWebviewPanel";
@@ -33,6 +33,7 @@ import type {
   UserMessage,
   WebviewMessage,
 } from "code-sidecar-shared/types/messages";
+import { ErrorType } from "code-sidecar-shared/types/errors";
 
 /**
  * Agent Webview Provider manages the sidebar panel and task execution
@@ -86,6 +87,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     this.conversationController = new ConversationController({
       conversationHistoryManager: this.conversationHistoryManager,
+      errorHandler: this.errorHandler,
       postMessage: (message) => this.postMessageToWebview(message),
       cancelCurrentTask: () => this.cancelCurrentTask(),
     });
@@ -277,8 +279,14 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     if (!isConfigured) {
       this.postMessageToWebview({
         type: "error",
-        message:
-          "API is not configured. Please configure your API settings first.",
+        error: {
+          type: ErrorType.CONFIGURATION_ERROR,
+          message:
+            "API is not configured. Please configure your API settings first.",
+          recoveryAction: "Open the settings page and enter your API credentials.",
+          retryable: false,
+          operation: "configuration_check",
+        },
       });
       return;
     }
@@ -309,6 +317,35 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     await this.currentTask.start();
   }
 
+  private buildErrorPayload(
+    error: unknown,
+    operation: string,
+    options: {
+      type: ErrorType;
+      userMessage: string;
+      recoveryAction: string;
+      retryable?: boolean;
+    }
+  ) {
+    const technicalDetails =
+      error instanceof Error ? error.message : String(error);
+    const appError = new AppError({
+      type: options.type,
+      message: technicalDetails,
+      userMessage: options.userMessage,
+      recoveryAction: options.recoveryAction,
+      technicalDetails,
+      retryable: options.retryable ?? false,
+      cause: error,
+    });
+
+    return this.errorHandler.createErrorPayload(appError, {
+      operation,
+      timestamp: new Date(),
+      userMessage: options.userMessage,
+    });
+  }
+
   /**
    * Handle mode change request
    */
@@ -330,13 +367,13 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
       logger.debug(`[AgentWebviewProvider] Mode changed to: ${mode}`);
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
-      vscode.window.showErrorMessage(`Failed to switch mode: ${errorMessage}`);
-      this.postMessageToWebview({
-        type: "error",
-        message: `Failed to switch mode: ${errorMessage}`,
+      const errorPayload = this.buildErrorPayload(error, "mode_change", {
+        type: ErrorType.SYSTEM_ERROR,
+        userMessage: "Failed to switch mode.",
+        recoveryAction: "Try switching modes again.",
       });
+      vscode.window.showErrorMessage(errorPayload.message);
+      this.postMessageToWebview({ type: "error", error: errorPayload });
     }
   }
 
@@ -454,11 +491,14 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         config,
       });
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorPayload = this.buildErrorPayload(error, "get_configuration", {
+        type: ErrorType.CONFIGURATION_ERROR,
+        userMessage: "Failed to load configuration.",
+        recoveryAction: "Try loading the configuration again.",
+      });
       this.postMessageToWebview({
         type: "validation_error",
-        errors: { general: `Failed to load configuration: ${errorMessage}` },
+        errors: { general: errorPayload.message },
       });
     }
   }
@@ -489,17 +529,18 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
       vscode.window.showInformationMessage("Configuration saved successfully");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorPayload = this.buildErrorPayload(error, "save_configuration", {
+        type: ErrorType.CONFIGURATION_ERROR,
+        userMessage: "Failed to save configuration.",
+        recoveryAction: "Try saving the configuration again.",
+      });
       this.postMessageToWebview({
         type: "configuration_saved",
         success: false,
-        error: errorMessage,
+        error: errorPayload.message,
       });
 
-      vscode.window.showErrorMessage(
-        `Failed to save configuration: ${errorMessage}`
-      );
+      vscode.window.showErrorMessage(errorPayload.message);
     }
   }
 
@@ -536,17 +577,18 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
         `API connection successful (${responseTime}ms)`
       );
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
+      const errorPayload = this.buildErrorPayload(error, "test_connection", {
+        type: ErrorType.API_ERROR,
+        userMessage: "API connection test failed.",
+        recoveryAction: "Verify your API settings and try again.",
+      });
       this.postMessageToWebview({
         type: "connection_test_result",
         success: false,
-        error: errorMessage,
+        error: errorPayload.message,
       });
 
-      vscode.window.showErrorMessage(
-        `API connection test failed: ${errorMessage}`
-      );
+      vscode.window.showErrorMessage(errorPayload.message);
     }
   }
 

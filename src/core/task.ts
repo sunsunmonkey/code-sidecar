@@ -1,4 +1,4 @@
-import {
+﻿import {
   ApiHandler,
   HistoryItem,
   OpenAIHistoryItem,
@@ -27,6 +27,7 @@ import { TaskErrorHandler } from "./taskErrorHandler";
 
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
+import { ErrorType } from "code-sidecar-shared/types/errors";
 
 /**
  * Task class manages the ReAct (Reasoning and Acting) loop
@@ -124,8 +125,6 @@ export class Task {
       this.history.push(userMessage);
 
       // Save user message to history
-      // TODO 这块的 history 和 展示的, 思考vscode workspace context
-
       this.conversationHistoryManager.addMessage({
         role: "user",
         content: this.displayMessage,
@@ -173,7 +172,13 @@ export class Task {
       if (!this.shouldContinueLoop()) {
         this.provider.postMessageToWebview({
           type: "error",
-          message: `已达到最大循环次数限制 (${this.maxLoopCount})。任务可能过于复杂，请简化任务或分解为多个步骤。`,
+          error: {
+            type: ErrorType.SYSTEM_ERROR,
+            message: `Max loop count reached (${this.maxLoopCount}). The request may be too complex.`,
+            recoveryAction: "Simplify the request or split it into smaller steps.",
+            retryable: false,
+            operation: "react_loop_limit",
+          },
         });
         this.completeTask();
         return;
@@ -252,9 +257,7 @@ export class Task {
       this.history.push(assistantHistoryItem);
 
       // Save assistant message to display history (tool XML stripped)
-      const assistantDisplayContent = getAssistantDisplayText(
-        assistantContent
-      );
+      const assistantDisplayContent = getAssistantDisplayText(assistantContent);
       if (assistantDisplayContent) {
         this.conversationHistoryManager.addMessage({
           role: "assistant",
@@ -290,7 +293,9 @@ export class Task {
       const hasCompletion = hasAttemptCompletion(toolCalls);
 
       // Execute tool calls and get results
-      const toolResults = await this.toolCallHandler.executeToolCalls(toolCalls);
+      const toolResults = await this.toolCallHandler.executeToolCalls(
+        toolCalls
+      );
 
       // Add tool results to history as user messages
       for (const result of toolResults) {
@@ -304,7 +309,7 @@ export class Task {
           content: result,
         });
 
-        // TODO 优化！！！
+        // TODO: optimize tool result history updates.
         const messages = this.conversationHistoryManager.getMessages();
         const lastToolCallIndex = messages.findIndex(
           (msg) =>
@@ -346,7 +351,7 @@ export class Task {
    * Get system prompt - uses PromptBuilder if available, otherwise falls back to file
    */
   private async getSystemPrompt(): Promise<string> {
-    // TODO 这块缓存真的有用？？？
+    // TODO: confirm whether caching the system prompt is still needed.
     if (this.systemPrompt) {
       return this.systemPrompt;
     }
@@ -474,3 +479,5 @@ Always use the actual tool name as the XML tag name for proper parsing and execu
 `;
   }
 }
+
+

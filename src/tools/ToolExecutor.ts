@@ -3,7 +3,8 @@ import * as vscode from "vscode";
 import { Tool, ToolDefinition } from "./Tool";
 import type { FileChangeTracker } from "./fileChangeTracker";
 import { PermissionManager } from "../managers/PermissionManager";
-import { ErrorHandler, ErrorContext } from "../managers/ErrorHandler";
+import { ErrorHandler } from "../managers";
+import type { ErrorContext } from "../managers";
 import { logger } from "code-sidecar-shared/utils/logger";
 
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";

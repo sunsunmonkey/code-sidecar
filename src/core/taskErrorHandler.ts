@@ -34,9 +34,15 @@ export class TaskErrorHandler {
       errorContext
     );
 
+    const errorPayload = this.options.errorHandler.createErrorPayload(
+      error,
+      errorContext,
+      errorResponse
+    );
+
     this.options.postMessage({
       type: "error",
-      message: errorResponse.userMessage,
+      error: errorPayload,
     });
 
     if (errorResponse.shouldRetry) {

@@ -1,19 +1,51 @@
 import { HistoryItem } from "../core/apiHandler";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
+import { AppError, ErrorHandler } from "../managers";
 import { logger } from "code-sidecar-shared/utils/logger";
 import type {
   DisplayMessage,
   WebviewMessage,
 } from "code-sidecar-shared/types/messages";
+import { ErrorType } from "code-sidecar-shared/types/errors";
 
 type ConversationControllerOptions = {
   conversationHistoryManager: ConversationHistoryManager;
+  errorHandler: ErrorHandler;
   postMessage: (message: WebviewMessage) => void;
   cancelCurrentTask: () => void;
 };
 
 export class ConversationController {
   constructor(private options: ConversationControllerOptions) {}
+
+  private postError(
+    error: unknown,
+    operation: string,
+    userMessage: string,
+    recoveryAction = "Try again."
+  ): void {
+    const technicalDetails =
+      error instanceof Error ? error.message : String(error);
+    const appError = new AppError({
+      type: ErrorType.SYSTEM_ERROR,
+      message: technicalDetails,
+      userMessage,
+      recoveryAction,
+      technicalDetails,
+      retryable: false,
+      cause: error,
+    });
+    const errorPayload = this.options.errorHandler.createErrorPayload(appError, {
+      operation,
+      timestamp: new Date(),
+      userMessage,
+    });
+
+    this.options.postMessage({
+      type: "error",
+      error: errorPayload,
+    });
+  }
 
   handleClearConversation(): void {
     try {
@@ -26,16 +58,11 @@ export class ConversationController {
 
       logger.debug("[ConversationController] Conversation cleared");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to clear conversation:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to clear conversation: ${errorMessage}`,
-      });
+      this.postError(error, "clear_conversation", "Failed to clear conversation.");
     }
   }
 
@@ -57,16 +84,15 @@ export class ConversationController {
 
       logger.debug("[ConversationController] Conversation history cleared");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to clear conversation history:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to clear conversation history: ${errorMessage}`,
-      });
+      this.postError(
+        error,
+        "clear_conversation_history",
+        "Failed to clear conversation history."
+      );
     }
   }
 
@@ -98,16 +124,15 @@ export class ConversationController {
         `[ConversationController] Sent ${displayMessages.length} messages to webview`
       );
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to get conversation history:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to get conversation history: ${errorMessage}`,
-      });
+      this.postError(
+        error,
+        "get_conversation_history",
+        "Failed to load conversation history."
+      );
     }
   }
 
@@ -127,16 +152,15 @@ export class ConversationController {
 
       logger.debug("[ConversationController] New conversation started");
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to start new conversation:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to start new conversation: ${errorMessage}`,
-      });
+      this.postError(
+        error,
+        "new_conversation",
+        "Failed to start a new conversation."
+      );
     }
   }
 
@@ -175,16 +199,15 @@ export class ConversationController {
         `[ConversationController] Sent ${formattedConversations.length} conversations to webview`
       );
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to get conversation list:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to get conversation list: ${errorMessage}`,
-      });
+      this.postError(
+        error,
+        "get_conversation_list",
+        "Failed to load conversation list."
+      );
     }
   }
 
@@ -203,22 +226,25 @@ export class ConversationController {
           `[ConversationController] Switched to conversation: ${conversationId}`
         );
       } else {
-        this.options.postMessage({
-          type: "error",
-          message: `Failed to switch to conversation: ${conversationId}`,
-        });
+        const missingConversationError = new Error(
+          `Conversation not found: ${conversationId}`
+        );
+        this.postError(
+          missingConversationError,
+          "switch_conversation",
+          "Failed to switch conversation."
+        );
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to switch conversation:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to switch conversation: ${errorMessage}`,
-      });
+      this.postError(
+        error,
+        "switch_conversation",
+        "Failed to switch conversation."
+      );
     }
   }
 
@@ -261,22 +287,25 @@ export class ConversationController {
         logger.debug(
           `[ConversationController] Failed to delete conversation: ${conversationId}`
         );
-        this.options.postMessage({
-          type: "error",
-          message: `Failed to delete conversation: ${conversationId}`,
-        });
+        const missingConversationError = new Error(
+          `Conversation not found: ${conversationId}`
+        );
+        this.postError(
+          missingConversationError,
+          "delete_conversation",
+          "Failed to delete conversation."
+        );
       }
     } catch (error) {
-      const errorMessage =
-        error instanceof Error ? error.message : String(error);
       logger.debug(
         "[ConversationController] Failed to delete conversation:",
         error
       );
-      this.options.postMessage({
-        type: "error",
-        message: `Failed to delete conversation: ${errorMessage}`,
-      });
+      this.postError(
+        error,
+        "delete_conversation",
+        "Failed to delete conversation."
+      );
     }
   }
 

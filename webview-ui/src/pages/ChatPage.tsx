@@ -6,6 +6,7 @@ import { ConversationList } from "../components/ConversationList";
 import { Settings2, Motorbike } from "lucide-react";
 import type {
   DisplayMessage,
+  ErrorPayload,
   WebviewMessage,
   ToolUse,
   ToolResult,
@@ -50,7 +51,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
         break;
 
       case "error":
-        handleError(message.message);
+        handleError(message.error);
         break;
 
       case "task_complete":
@@ -252,11 +253,14 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   /**
    * Handle error messages
    */
-  const handleError = (errorMessage: string) => {
+  const handleError = (errorPayload: ErrorPayload) => {
+    const content = errorPayload.recoveryAction
+      ? `${errorPayload.message}\nSuggested action: ${errorPayload.recoveryAction}`
+      : errorPayload.message;
     const errorMsg: DisplayMessage = {
       id: `msg-${Date.now()}`,
       role: "system",
-      content: errorMessage,
+      content: content,
       timestamp: new Date(),
       isError: true,
     };

@@ -1,56 +1,15 @@
-import { logger } from "code-sidecar-shared/utils/logger";
+﻿import { logger } from "code-sidecar-shared/utils/logger";
+import { ErrorType } from "code-sidecar-shared/types/errors";
+import type { ErrorPayload } from "code-sidecar-shared/types/errors";
+import { AppError, ErrorContext, ErrorLogEntry, ErrorResponse } from "./errorTypes";
+import { buildErrorStatistics, ErrorStatistics } from "./errorStatistics";
 
 /**
  * Error Handler for managing and recovering from various error types
  * Requirements: 12.1, 12.2, 12.3, 12.4, 12.5
  */
 
-/**
- * Error types that can occur in the system
- */
-export enum ErrorType {
-  API_ERROR = 'api_error',
-  TOOL_ERROR = 'tool_error',
-  PARSING_ERROR = 'parsing_error',
-  NETWORK_ERROR = 'network_error',
-  PERMISSION_ERROR = 'permission_error',
-  CONFIGURATION_ERROR = 'configuration_error',
-  SYSTEM_ERROR = 'system_error',
-  UNKNOWN_ERROR = 'unknown_error',
-}
-
-/**
- * Error context information
- */
-export interface ErrorContext {
-  operation: string;
-  timestamp: Date;
-  userMessage?: string;
-  stackTrace?: string;
-  additionalInfo?: Record<string, any>;
-}
-
-/**
- * Error response with user-friendly message and recovery options
- */
-export interface ErrorResponse {
-  userMessage: string;
-  shouldRetry: boolean;
-  recoveryAction?: string;
-  technicalDetails?: string;
-}
-
-/**
- * Error log entry
- */
-export interface ErrorLogEntry {
-  id: string;
-  type: ErrorType;
-  message: string;
-  context: ErrorContext;
-  timestamp: Date;
-  resolved: boolean;
-}
+type BaseErrorResponse = Omit<ErrorResponse, "type">;
 
 /**
  * ErrorHandler class manages error handling, logging, and recovery
@@ -70,7 +29,7 @@ export class ErrorHandler {
    * @returns ErrorResponse with user-friendly message and recovery options
    */
   handleError(error: Error | unknown, context: ErrorContext): ErrorResponse {
-    const errorType = this.classifyError(error);
+    const errorType = this.classifyError(error, context);
     const errorMessage = error instanceof Error ? error.message : String(error);
     const stackTrace = error instanceof Error ? error.stack : undefined;
 
@@ -80,15 +39,58 @@ export class ErrorHandler {
       stackTrace,
     });
 
-    // Generate user-friendly response based on error type
-    return this.generateErrorResponse(errorType, errorMessage, context);
+    const baseResponse = this.generateErrorResponse(
+      errorType,
+      errorMessage,
+      context
+    );
+
+    if (error instanceof AppError) {
+      return {
+        ...baseResponse,
+        userMessage: error.userMessage ?? baseResponse.userMessage,
+        recoveryAction: error.recoveryAction ?? baseResponse.recoveryAction,
+        technicalDetails:
+          error.technicalDetails ?? baseResponse.technicalDetails ?? errorMessage,
+        shouldRetry:
+          typeof error.retryable === "boolean"
+            ? error.retryable
+            : baseResponse.shouldRetry,
+      };
+    }
+
+    return baseResponse;
+  }
+
+  createErrorPayload(
+    error: Error | unknown,
+    context: ErrorContext,
+    errorResponse?: ErrorResponse
+  ): ErrorPayload {
+    const response = errorResponse ?? this.handleError(error, context);
+    return {
+      type: response.type,
+      message: response.userMessage,
+      recoveryAction: response.recoveryAction,
+      retryable: response.shouldRetry,
+      technicalDetails: response.technicalDetails,
+      operation: context.operation,
+    };
   }
 
   /**
    * Classify error into specific error type
    * Requirement 12.1, 12.2
    */
-  private classifyError(error: Error | unknown): ErrorType {
+  private classifyError(error: Error | unknown, context?: ErrorContext): ErrorType {
+    if (error instanceof AppError) {
+      return error.type;
+    }
+
+    if (context?.type) {
+      return context.type;
+    }
+
     if (!(error instanceof Error)) {
       return ErrorType.UNKNOWN_ERROR;
     }
@@ -98,72 +100,72 @@ export class ErrorHandler {
 
     // API errors (Requirement 12.1)
     if (
-      message.includes('api') ||
-      message.includes('authentication') ||
-      message.includes('unauthorized') ||
-      message.includes('rate limit') ||
-      name.includes('apierror')
+      message.includes("api") ||
+      message.includes("authentication") ||
+      message.includes("unauthorized") ||
+      message.includes("rate limit") ||
+      name.includes("apierror")
     ) {
       return ErrorType.API_ERROR;
     }
 
     // Network errors (Requirement 12.4)
     if (
-      message.includes('network') ||
-      message.includes('timeout') ||
-      message.includes('econnrefused') ||
-      message.includes('enotfound') ||
-      message.includes('fetch failed') ||
-      name.includes('networkerror')
+      message.includes("network") ||
+      message.includes("timeout") ||
+      message.includes("econnrefused") ||
+      message.includes("enotfound") ||
+      message.includes("fetch failed") ||
+      name.includes("networkerror")
     ) {
       return ErrorType.NETWORK_ERROR;
     }
 
     // Tool execution errors (Requirement 12.2)
     if (
-      message.includes('tool') ||
-      message.includes('file not found') ||
-      message.includes('enoent') ||
-      message.includes('permission denied') ||
-      message.includes('eacces')
+      message.includes("tool") ||
+      message.includes("file not found") ||
+      message.includes("enoent") ||
+      message.includes("permission denied") ||
+      message.includes("eacces")
     ) {
       return ErrorType.TOOL_ERROR;
     }
 
     // Permission errors (Requirement 12.3)
     if (
-      message.includes('permission') ||
-      message.includes('access denied') ||
-      message.includes('unauthorized')
+      message.includes("permission") ||
+      message.includes("access denied") ||
+      message.includes("unauthorized")
     ) {
       return ErrorType.PERMISSION_ERROR;
     }
 
     // Parsing errors (Requirement 12.2)
     if (
-      message.includes('parse') ||
-      message.includes('xml') ||
-      message.includes('json') ||
-      message.includes('syntax') ||
-      name.includes('syntaxerror')
+      message.includes("parse") ||
+      message.includes("xml") ||
+      message.includes("json") ||
+      message.includes("syntax") ||
+      name.includes("syntaxerror")
     ) {
       return ErrorType.PARSING_ERROR;
     }
 
     // Configuration errors (Requirement 12.1)
     if (
-      message.includes('configuration') ||
-      message.includes('config') ||
-      message.includes('not configured')
+      message.includes("configuration") ||
+      message.includes("config") ||
+      message.includes("not configured")
     ) {
       return ErrorType.CONFIGURATION_ERROR;
     }
 
     // System errors (Requirement 12.5)
     if (
-      message.includes('memory') ||
-      message.includes('disk') ||
-      message.includes('system')
+      message.includes("memory") ||
+      message.includes("disk") ||
+      message.includes("system")
     ) {
       return ErrorType.SYSTEM_ERROR;
     }
@@ -180,60 +182,77 @@ export class ErrorHandler {
     errorMessage: string,
     context: ErrorContext
   ): ErrorResponse {
+    let response: BaseErrorResponse;
+
     switch (errorType) {
       case ErrorType.API_ERROR:
-        return this.handleApiError(errorMessage, context);
+        response = this.handleApiError(errorMessage, context);
+        break;
 
       case ErrorType.NETWORK_ERROR:
-        return this.handleNetworkError(errorMessage, context);
+        response = this.handleNetworkError(errorMessage, context);
+        break;
 
       case ErrorType.TOOL_ERROR:
-        return this.handleToolError(errorMessage, context);
+        response = this.handleToolError(errorMessage, context);
+        break;
 
       case ErrorType.PERMISSION_ERROR:
-        return this.handlePermissionError(errorMessage, context);
+        response = this.handlePermissionError(errorMessage, context);
+        break;
 
       case ErrorType.PARSING_ERROR:
-        return this.handleParsingError(errorMessage, context);
+        response = this.handleParsingError(errorMessage, context);
+        break;
 
       case ErrorType.CONFIGURATION_ERROR:
-        return this.handleConfigurationError(errorMessage, context);
+        response = this.handleConfigurationError(errorMessage, context);
+        break;
 
       case ErrorType.SYSTEM_ERROR:
-        return this.handleSystemError(errorMessage, context);
+        response = this.handleSystemError(errorMessage, context);
+        break;
 
       case ErrorType.UNKNOWN_ERROR:
       default:
-        return this.handleUnknownError(errorMessage, context);
+        response = this.handleUnknownError(errorMessage, context);
+        break;
     }
+
+    return { type: errorType, ...response };
   }
 
   /**
    * Handle API errors
    */
-  private handleApiError(message: string, context: ErrorContext): ErrorResponse {
-    if (message.includes('authentication') || message.includes('unauthorized')) {
+  private handleApiError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
+    if (message.includes("authentication") || message.includes("unauthorized")) {
       return {
-        userMessage: '❌ API authentication failed. Please check your API key in settings.',
+        userMessage:
+          "API authentication failed. Please check your API key in settings.",
         shouldRetry: false,
-        recoveryAction: 'Update your API key in the extension settings.',
+        recoveryAction: "Update your API key in the extension settings.",
         technicalDetails: message,
       };
     }
 
-    if (message.includes('rate limit')) {
+    if (message.includes("rate limit")) {
       return {
-        userMessage: '⏱️ API rate limit exceeded. Please wait a moment before trying again.',
+        userMessage:
+          "API rate limit exceeded. Please wait a moment before trying again.",
         shouldRetry: true,
-        recoveryAction: 'Wait a few minutes and retry your request.',
+        recoveryAction: "Wait a few minutes and retry your request.",
         technicalDetails: message,
       };
     }
 
     return {
-      userMessage: `❌ API error occurred: ${this.sanitizeErrorMessage(message)}`,
+      userMessage: `API error occurred: ${this.sanitizeErrorMessage(message)}`,
       shouldRetry: false,
-      recoveryAction: 'Check your API configuration and try again.',
+      recoveryAction: "Check your API configuration and try again.",
       technicalDetails: message,
     };
   }
@@ -242,16 +261,21 @@ export class ErrorHandler {
    * Handle network errors with automatic retry
    * Requirement 12.4
    */
-  private handleNetworkError(message: string, context: ErrorContext): ErrorResponse {
+  private handleNetworkError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
     const operationKey = context.operation;
     const attempts = this.retryAttempts.get(operationKey) || 0;
 
     if (attempts < this.MAX_RETRY_ATTEMPTS) {
       this.retryAttempts.set(operationKey, attempts + 1);
       return {
-        userMessage: `🔄 Network error occurred. Retrying... (Attempt ${attempts + 1}/${this.MAX_RETRY_ATTEMPTS})`,
+        userMessage: `Network error occurred. Retrying... (Attempt ${
+          attempts + 1
+        }/${this.MAX_RETRY_ATTEMPTS})`,
         shouldRetry: true,
-        recoveryAction: 'Automatic retry in progress.',
+        recoveryAction: "Automatic retry in progress.",
         technicalDetails: message,
       };
     }
@@ -259,9 +283,10 @@ export class ErrorHandler {
     // Max retries reached
     this.retryAttempts.delete(operationKey);
     return {
-      userMessage: '❌ Network connection failed after multiple attempts. Please check your internet connection.',
+      userMessage:
+        "Network connection failed after multiple attempts. Please check your internet connection.",
       shouldRetry: false,
-      recoveryAction: 'Check your network connection and try again.',
+      recoveryAction: "Check your network connection and try again.",
       technicalDetails: message,
     };
   }
@@ -270,29 +295,34 @@ export class ErrorHandler {
    * Handle tool execution errors
    * Requirement 12.2
    */
-  private handleToolError(message: string, context: ErrorContext): ErrorResponse {
-    if (message.includes('file not found') || message.includes('enoent')) {
+  private handleToolError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
+    if (message.includes("file not found") || message.includes("enoent")) {
       return {
-        userMessage: '📁 File not found. The specified file does not exist.',
+        userMessage: "File not found. The specified file does not exist.",
         shouldRetry: false,
-        recoveryAction: 'Verify the file path and try again.',
+        recoveryAction: "Verify the file path and try again.",
         technicalDetails: message,
       };
     }
 
-    if (message.includes('permission denied') || message.includes('eacces')) {
+    if (message.includes("permission denied") || message.includes("eacces")) {
       return {
-        userMessage: '🔒 Permission denied. Insufficient permissions to access the file or directory.',
+        userMessage:
+          "Permission denied. Insufficient permissions to access the file or directory.",
         shouldRetry: false,
-        recoveryAction: 'Check file permissions or run with appropriate access rights.',
+        recoveryAction:
+          "Check file permissions or run with appropriate access rights.",
         technicalDetails: message,
       };
     }
 
     return {
-      userMessage: `⚠️ Tool execution failed: ${this.sanitizeErrorMessage(message)}`,
+      userMessage: `Tool execution failed: ${this.sanitizeErrorMessage(message)}`,
       shouldRetry: false,
-      recoveryAction: 'Review the error details and adjust your request.',
+      recoveryAction: "Review the error details and adjust your request.",
       technicalDetails: message,
     };
   }
@@ -301,11 +331,16 @@ export class ErrorHandler {
    * Handle permission errors
    * Requirement 12.3
    */
-  private handlePermissionError(message: string, context: ErrorContext): ErrorResponse {
+  private handlePermissionError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
     return {
-      userMessage: '🔒 Permission denied. You need to grant permission for this operation.',
+      userMessage:
+        "Permission denied. You need to grant permission for this operation.",
       shouldRetry: false,
-      recoveryAction: 'Update your permission settings or approve the operation when prompted.',
+      recoveryAction:
+        "Update your permission settings or approve the operation when prompted.",
       technicalDetails: message,
     };
   }
@@ -314,11 +349,16 @@ export class ErrorHandler {
    * Handle parsing errors
    * Requirement 12.2
    */
-  private handleParsingError(message: string, context: ErrorContext): ErrorResponse {
+  private handleParsingError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
     return {
-      userMessage: '⚠️ Failed to parse response. The AI response format was invalid.',
+      userMessage:
+        "Failed to parse response. The AI response format was invalid.",
       shouldRetry: true,
-      recoveryAction: 'The system will retry the request with corrected formatting.',
+      recoveryAction:
+        "The system will retry the request with corrected formatting.",
       technicalDetails: message,
     };
   }
@@ -327,11 +367,15 @@ export class ErrorHandler {
    * Handle configuration errors
    * Requirement 12.1
    */
-  private handleConfigurationError(message: string, context: ErrorContext): ErrorResponse {
+  private handleConfigurationError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
     return {
-      userMessage: '⚙️ Configuration error. Please check your extension settings.',
+      userMessage: "Configuration error. Please check your extension settings.",
       shouldRetry: false,
-      recoveryAction: 'Review and update your configuration in the extension settings.',
+      recoveryAction:
+        "Review and update your configuration in the extension settings.",
       technicalDetails: message,
     };
   }
@@ -340,11 +384,15 @@ export class ErrorHandler {
    * Handle system errors
    * Requirement 12.5
    */
-  private handleSystemError(message: string, context: ErrorContext): ErrorResponse {
+  private handleSystemError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
     return {
-      userMessage: '💥 System error occurred. This may be due to resource constraints.',
+      userMessage:
+        "System error occurred. This may be due to resource constraints.",
       shouldRetry: false,
-      recoveryAction: 'Try closing other applications or restarting VS Code.',
+      recoveryAction: "Try closing other applications or restarting VS Code.",
       technicalDetails: message,
     };
   }
@@ -353,11 +401,16 @@ export class ErrorHandler {
    * Handle unknown errors
    * Requirement 12.5
    */
-  private handleUnknownError(message: string, context: ErrorContext): ErrorResponse {
+  private handleUnknownError(
+    message: string,
+    context: ErrorContext
+  ): BaseErrorResponse {
     return {
-      userMessage: `❌ An unexpected error occurred: ${this.sanitizeErrorMessage(message)}`,
+      userMessage: `An unexpected error occurred: ${this.sanitizeErrorMessage(
+        message
+      )}`,
       shouldRetry: false,
-      recoveryAction: 'Please try again or report this issue if it persists.',
+      recoveryAction: "Please try again or report this issue if it persists.",
       technicalDetails: message,
     };
   }
@@ -370,7 +423,11 @@ export class ErrorHandler {
    * @returns Promise<boolean> indicating if recovery was successful
    */
   async attemptRecovery(error: Error | unknown, context: ErrorContext): Promise<boolean> {
-    const errorType = this.classifyError(error);
+    if (!this.isRetryable(error)) {
+      return false;
+    }
+
+    const errorType = this.classifyError(error, context);
 
     // Only attempt automatic recovery for network errors
     if (errorType === ErrorType.NETWORK_ERROR) {
@@ -449,7 +506,7 @@ export class ErrorHandler {
   clearErrorLog(): void {
     this.errorLog = [];
     this.retryAttempts.clear();
-    logger.debug('[ErrorHandler] Error log cleared');
+    logger.debug("[ErrorHandler] Error log cleared");
   }
 
   /**
@@ -475,12 +532,12 @@ export class ErrorHandler {
    */
   private sanitizeErrorMessage(message: string): string {
     // Remove stack traces
-    const lines = message.split('\n');
+    const lines = message.split("\n");
     const firstLine = lines[0];
 
     // Truncate long messages
     if (firstLine.length > 200) {
-      return firstLine.substring(0, 200) + '...';
+      return firstLine.substring(0, 200) + "...";
     }
 
     return firstLine;
@@ -492,43 +549,22 @@ export class ErrorHandler {
    * @returns boolean indicating if error is retryable
    */
   isRetryable(error: Error | unknown): boolean {
+    if (error instanceof AppError && typeof error.retryable === "boolean") {
+      return error.retryable;
+    }
+
     const errorType = this.classifyError(error);
-    return errorType === ErrorType.NETWORK_ERROR || errorType === ErrorType.PARSING_ERROR;
+    return (
+      errorType === ErrorType.NETWORK_ERROR ||
+      errorType === ErrorType.PARSING_ERROR
+    );
   }
 
   /**
    * Get error statistics
    * @returns Object with error statistics
    */
-  getErrorStatistics(): {
-    total: number;
-    byType: Record<ErrorType, number>;
-    resolved: number;
-    unresolved: number;
-  } {
-    const stats = {
-      total: this.errorLog.length,
-      byType: {} as Record<ErrorType, number>,
-      resolved: 0,
-      unresolved: 0,
-    };
-
-    // Initialize all error types to 0
-    Object.values(ErrorType).forEach(type => {
-      stats.byType[type] = 0;
-    });
-
-    // Count errors by type and resolution status
-    this.errorLog.forEach(entry => {
-      stats.byType[entry.type]++;
-      if (entry.resolved) {
-        stats.resolved++;
-      } else {
-        stats.unresolved++;
-      }
-    });
-
-    return stats;
+  getErrorStatistics(): ErrorStatistics {
+    return buildErrorStatistics(this.errorLog);
   }
 }
-

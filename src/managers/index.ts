@@ -11,11 +11,15 @@ export {
 } from "./ConversationHistoryManager";
 export {
   ErrorHandler,
-  ErrorType,
+} from "./ErrorHandler";
+export {
+  AppError,
   ErrorContext,
   ErrorResponse,
   ErrorLogEntry,
-} from "./ErrorHandler";
+} from "./errorTypes";
+export type { ErrorStatistics } from "./errorStatistics";
+export { ErrorType } from "code-sidecar-shared/types/errors";
 export {
   ContextCollector,
   DiagnosticInfo,

@@ -10,3 +10,4 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Add task-level diff preview in chat with a dedicated diff panel
 - Add /init chat command to generate AGENTS.md guidance
 - Add action to clear all conversation history from the chat list
+- Improve error handling with structured error payloads and API retry logic
