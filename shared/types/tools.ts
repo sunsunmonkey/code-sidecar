@@ -1,8 +1,7 @@
 export interface ToolUse {
   type: "tool_use";
   name: string;
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  params: Record<string, any>;
+  params: Record<string, unknown>;
   id?: string;
   partial?: boolean;
 }

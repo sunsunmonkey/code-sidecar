@@ -29,8 +29,7 @@ export function useVSCodeApi() {
    * Set the persisted state
    * @param state - The state to persist
    */
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const setState = useCallback((state: any) => {
+  const setState = useCallback(<T,>(state: T) => {
     vscode.setState(state);
   }, []);
 
@@ -48,7 +47,7 @@ export function useVSCodeApi() {
  * @param handler - Callback function to handle incoming messages
  * @param dependencies - Dependencies array for the handler callback
  */
-export function useMessageListener<T = any>(
+export function useMessageListener<T = unknown>(
   handler: (message: T) => void,
   dependencies: React.DependencyList = []
 ) {
@@ -78,7 +77,7 @@ export function useMessageListener<T = any>(
  * @param messageHandler - Optional callback function to handle incoming messages
  * @returns Object containing vscode API and helper functions
  */
-export function useVSCodeApiWithListener<T = any>(
+export function useVSCodeApiWithListener<T = unknown>(
   messageHandler?: (message: T) => void
 ) {
   const api = useVSCodeApi();

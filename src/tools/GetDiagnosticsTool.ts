@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
+import { resolveWorkspacePath } from './pathValidation';
 
 /**
  * GetDiagnosticsTool - retrieves VSCode diagnostic information (errors, warnings)
@@ -68,29 +69,10 @@ export class GetDiagnosticsTool extends BaseTool {
   }
 
   /**
-   * Validate and resolve file path
-   */
-  private resolveFilePath(filePath: string): vscode.Uri {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error('No workspace folder is open');
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    
-    // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(filePath) 
-      ? filePath 
-      : path.join(workspaceRoot, filePath);
-    
-    return vscode.Uri.file(resolvedPath);
-  }
-
-  /**
    * Execute the get_diagnostics tool
    * Requirements: 13.6
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const filePath = params.filePath as string | undefined;
     
     try {
@@ -98,7 +80,7 @@ export class GetDiagnosticsTool extends BaseTool {
       
       if (filePath) {
         // Get diagnostics for specific file
-        const uri = this.resolveFilePath(filePath);
+        const uri = vscode.Uri.file(resolveWorkspacePath(filePath));
         const diagnostics = vscode.languages.getDiagnostics(uri);
         
         if (diagnostics.length > 0) {

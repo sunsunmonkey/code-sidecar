@@ -1,6 +1,6 @@
 import * as vscode from "vscode";
-import * as path from "path";
 import { BaseTool, ParameterDefinition } from "./Tool";
+import { resolveWorkspacePath } from "./pathValidation";
 
 /**
  * ReadFileTool - reads file content with line numbers
@@ -25,37 +25,6 @@ export class ReadFileTool extends BaseTool {
   ];
 
   /**
-   * Validate and normalize file path to prevent path traversal attacks
-   * Requirements: 13.4
-   */
-  private validatePath(filePath: string): string {
-    // Get workspace folder
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error("No workspace folder is open");
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-
-    // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(workspaceRoot, filePath);
-
-    // Normalize the path to resolve .. and .
-    const normalizedPath = path.normalize(resolvedPath);
-
-    // Check if the normalized path is within the workspace
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(
-        `Access denied: Path '${filePath}' is outside the workspace`
-      );
-    }
-
-    return normalizedPath;
-  }
-
-  /**
    * Format file content with line numbers
    */
   private formatWithLineNumbers(content: string): string {
@@ -76,12 +45,12 @@ export class ReadFileTool extends BaseTool {
    * Execute the read_file tool
    * Requirements: 13.1, 13.4
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const filePath = params.path as string;
 
     try {
       // Validate and normalize the path
-      const validatedPath = this.validatePath(filePath);
+      const validatedPath = resolveWorkspacePath(filePath);
 
       // Read the file using VSCode API
       const uri = vscode.Uri.file(validatedPath);

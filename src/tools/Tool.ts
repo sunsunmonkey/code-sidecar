@@ -47,14 +47,14 @@ export interface Tool {
    * @param params Tool parameters
    * @returns Promise<string> Tool execution result
    */
-  execute(params: Record<string, any>): Promise<string>;
+  execute(params: Record<string, unknown>): Promise<string>;
 
   /**
    * Validate tool parameters
    * @param params Tool parameters
    * @returns boolean indicating if parameters are valid
    */
-  validate(params: Record<string, any>): boolean;
+  validate(params: Record<string, unknown>): boolean;
 }
 
 /**
@@ -66,13 +66,13 @@ export abstract class BaseTool implements Tool {
   abstract readonly parameters: ParameterDefinition[];
   abstract readonly requiresPermission: boolean;
 
-  abstract execute(params: Record<string, any>): Promise<string>;
+  abstract execute(params: Record<string, unknown>): Promise<string>;
 
   /**
    * Validate parameters against parameter definitions
    * Requirements: 13.7
    */
-  validate(params: Record<string, any>): boolean {
+  validate(params: Record<string, unknown>): boolean {
     // Check all required parameters are present
     for (const param of this.parameters) {
       if (param.required && !(param.name in params)) {

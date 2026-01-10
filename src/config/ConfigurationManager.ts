@@ -22,7 +22,7 @@ export class ConfigurationManager {
    * Generic method to update multiple configuration keys
    */
   private async updateConfigKeys(
-    updates: Array<{ key: string; value: any }>
+    updates: Array<{ key: string; value: unknown }>
   ): Promise<void> {
     const config = vscode.workspace.getConfiguration(
       ConfigurationManager.CONFIG_SECTION

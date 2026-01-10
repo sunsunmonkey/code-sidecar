@@ -1,5 +1,5 @@
 import * as vscode from "vscode";
-import { HistoryItem } from "../core/apiHandler";
+import type { HistoryItem } from "code-sidecar-shared/types/messages";
 import { logger } from "code-sidecar-shared/utils/logger";
 
 /**

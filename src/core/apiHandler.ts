@@ -9,22 +9,10 @@ import {
   PermissionDeniedError,
   RateLimitError,
 } from "openai";
-import type { ToolResult, ToolUse } from "code-sidecar-shared/types/tools";
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
 import { logger } from "code-sidecar-shared/utils/logger";
 import { AppError } from "../managers/errorTypes";
 import { ErrorType } from "code-sidecar-shared/types/errors";
-
-/**
- * Message history item
- */
-// TODO 收口这些消息
-export type HistoryItem = {
-  role: string;
-  content: string | ToolResult;
-  toolCalls?: ToolUse[];
-  toolResults?: ToolResult[];
-};
 
 export type OpenAIHistoryItem =
   OpenAI.Chat.Completions.ChatCompletionMessageParam[];

@@ -1,9 +1,9 @@
-import { HistoryItem } from "../core/apiHandler";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { AppError, ErrorHandler } from "../managers";
 import { logger } from "code-sidecar-shared/utils/logger";
 import type {
   DisplayMessage,
+  HistoryItem,
   WebviewMessage,
 } from "code-sidecar-shared/types/messages";
 import { ErrorType } from "code-sidecar-shared/types/errors";

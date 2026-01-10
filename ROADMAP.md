@@ -75,13 +75,13 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
 
 ### Phase 1: 稳定性 & 测试 (优先)
 
-- [ ] **错误处理增强**
+- [x] **错误处理增强**
 
   - 统一错误类型定义
   - 完善 API 调用重试机制
   - 添加用户友好的错误提示
 
-- [ ] **代码重构**
+- [X] **代码重构**
   - 提取公共的路径验证工具
   - 统一消息类型 (`HistoryItem`, `DisplayMessage` 等)
   - 清理 `any` 类型
@@ -92,7 +92,6 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
 
   - 支持 `@file` 引用文件
   - 支持 `@workspace` 引用工作区结构
-  - 支持图片上传 (Vision API)
 
 - [ ] **工具扩展**
 

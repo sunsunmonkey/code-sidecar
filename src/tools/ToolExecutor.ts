@@ -1,4 +1,3 @@
-import * as path from "path";
 import * as vscode from "vscode";
 import { Tool, ToolDefinition } from "./Tool";
 import type { FileChangeTracker } from "./fileChangeTracker";
@@ -6,6 +5,7 @@ import { PermissionManager } from "../managers/PermissionManager";
 import { ErrorHandler } from "../managers";
 import type { ErrorContext } from "../managers";
 import { logger } from "code-sidecar-shared/utils/logger";
+import { tryResolveWorkspacePath } from "./pathValidation";
 
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
 import type { PermissionRequest } from "code-sidecar-shared/types/messages";
@@ -211,27 +211,8 @@ export class ToolExecutor {
     );
   }
 
-  private resolveFilePath(filePath: string): string | null {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      return null;
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    const resolvedPath = path.isAbsolute(filePath)
-      ? filePath
-      : path.join(workspaceRoot, filePath);
-    const normalizedPath = path.normalize(resolvedPath);
-
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      return null;
-    }
-
-    return normalizedPath;
-  }
-
   private async readFileSafe(filePath: string): Promise<string> {
-    const resolvedPath = this.resolveFilePath(filePath);
+    const resolvedPath = tryResolveWorkspacePath(filePath);
     if (!resolvedPath) {
       return "";
     }

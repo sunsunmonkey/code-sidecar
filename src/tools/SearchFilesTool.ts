@@ -46,7 +46,7 @@ export class SearchFilesTool extends BaseTool {
    * Search files in the workspace
    * Requirements: 13.5
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const pattern = params.pattern as string;
     const filePattern = (params.file_pattern as string) || '**/*';
     const caseSensitive = params.case_sensitive === true;

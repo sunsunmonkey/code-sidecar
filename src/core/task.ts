@@ -1,6 +1,5 @@
 ﻿import {
   ApiHandler,
-  HistoryItem,
   OpenAIHistoryItem,
   TokenUsage,
 } from "./apiHandler";
@@ -26,6 +25,7 @@ import {
 import { TaskErrorHandler } from "./taskErrorHandler";
 
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
+import type { HistoryItem } from "code-sidecar-shared/types/messages";
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
 import { ErrorType } from "code-sidecar-shared/types/errors";
 

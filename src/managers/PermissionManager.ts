@@ -3,6 +3,7 @@ import type {
   PermissionRequest,
   PermissionRequestWithId,
 } from "code-sidecar-shared/types/permissions";
+import type { WebviewMessage } from "code-sidecar-shared/types/messages";
 import {
   DEFAULT_PERMISSION_SETTINGS,
   type PermissionSettings,
@@ -10,6 +11,9 @@ import {
 import { logger } from "code-sidecar-shared/utils/logger";
 
 type PermissionSettingsWithDefaults = Required<PermissionSettings>;
+type PermissionWebviewProvider = {
+  postMessageToWebview: (message: WebviewMessage) => void;
+};
 
 const OPERATION_DEFAULTS: Record<
   string,
@@ -30,7 +34,7 @@ const normalizeOperation = (operation: string): string =>
 export class PermissionManager {
   private settings: PermissionSettingsWithDefaults;
 
-  private webviewProvider: any;
+  private webviewProvider: PermissionWebviewProvider | null = null;
   private pendingRequests: Map<string, (approved: boolean) => void> = new Map();
 
   private static mergeSettings(
@@ -62,7 +66,7 @@ export class PermissionManager {
   /**
    * Set webview provider for permission requests
    */
-  setWebviewProvider(provider: any): void {
+  setWebviewProvider(provider: PermissionWebviewProvider): void {
     this.webviewProvider = provider;
   }
 
@@ -143,6 +147,11 @@ export class PermissionManager {
   private async requestWebviewConfirmation(
     request: PermissionRequest
   ): Promise<boolean> {
+    const webviewProvider = this.webviewProvider;
+    if (!webviewProvider) {
+      return await this.requestUserConfirmation(request);
+    }
+
     const requestId = `perm-${Date.now()}-${Math.random()
       .toString(36)
       .slice(2, 11)}`;
@@ -153,7 +162,7 @@ export class PermissionManager {
     };
 
     // Send permission request to webview
-    this.webviewProvider.postMessageToWebview({
+    webviewProvider.postMessageToWebview({
       type: "permission_request",
       request: requestWithId,
     });

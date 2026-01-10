@@ -1,8 +1,7 @@
-import * as vscode from "vscode";
-import * as path from "path";
 import { exec } from "child_process";
 import { promisify } from "util";
 import { BaseTool, ParameterDefinition } from "./Tool";
+import { resolveWorkspacePathOrRoot } from "./pathValidation";
 
 /**
  * ExecuteCommandTool - executes shell commands in the extension host
@@ -34,36 +33,6 @@ export class ExecuteCommandTool extends BaseTool {
   ];
 
   /**
-   * Validate and normalize working directory path
-   */
-  private validateCwd(cwd: string | undefined): string {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error("No workspace folder is open");
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-
-    if (!cwd) {
-      return workspaceRoot;
-    }
-
-    const resolvedPath = path.isAbsolute(cwd)
-      ? cwd
-      : path.join(workspaceRoot, cwd);
-
-    const normalizedPath = path.normalize(resolvedPath);
-
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(
-        `Access denied: Working directory '${cwd}' is outside the workspace`
-      );
-    }
-
-    return normalizedPath;
-  }
-
-  /**
    * Execute command and capture output
    */
   private async executeCommand(
@@ -83,16 +52,25 @@ export class ExecuteCommandTool extends BaseTool {
         stderr: stderr.trim(),
         exitCode: 0,
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const errorWithOutput = error as {
+        stdout?: unknown;
+        stderr?: unknown;
+        message?: unknown;
+        code?: unknown;
+      };
       const stdout =
-        typeof error.stdout === "string" ? error.stdout.trim() : "";
+        typeof errorWithOutput.stdout === "string"
+          ? errorWithOutput.stdout.trim()
+          : "";
       const stderr =
-        typeof error.stderr === "string"
-          ? error.stderr.trim()
-          : typeof error.message === "string"
-            ? error.message
+        typeof errorWithOutput.stderr === "string"
+          ? errorWithOutput.stderr.trim()
+          : typeof errorWithOutput.message === "string"
+            ? errorWithOutput.message
             : "Command failed.";
-      const exitCode = typeof error.code === "number" ? error.code : 1;
+      const exitCode =
+        typeof errorWithOutput.code === "number" ? errorWithOutput.code : 1;
 
       return {
         stdout,
@@ -105,12 +83,14 @@ export class ExecuteCommandTool extends BaseTool {
   /**
    * Execute the command directly without opening a terminal
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const command = params.command as string;
     const cwd = params.cwd as string | undefined;
 
     try {
-      const validatedCwd = this.validateCwd(cwd);
+      const validatedCwd = resolveWorkspacePathOrRoot(cwd, {
+        fallbackToWorkspaceRoot: true,
+      });
       const { stdout, stderr, exitCode } = await this.executeCommand(
         command,
         validatedCwd
@@ -136,11 +116,13 @@ export class ExecuteCommandTool extends BaseTool {
       }
 
       return result;
-    } catch (error: any) {
-      if (error.message.includes("Working directory:")) {
+    } catch (error: unknown) {
+      if (error instanceof Error && error.message.includes("Working directory:")) {
         throw error;
       }
-      throw new Error(`Failed to execute command: ${error.message}`);
+
+      const message = error instanceof Error ? error.message : String(error);
+      throw new Error(`Failed to execute command: ${message}`);
     }
   }
 }

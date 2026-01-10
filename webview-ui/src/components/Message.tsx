@@ -456,8 +456,7 @@ export const Message: React.FC<MessageProps> = ({
 
             return language ? (
               <SyntaxHighlighter
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                style={syntaxTheme as any}
+                style={syntaxTheme}
                 language={language}
                 PreTag="div"
               >

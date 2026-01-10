@@ -28,7 +28,7 @@ export class AttemptCompletionTool extends BaseTool {
    * @param params Tool parameters containing the result summary
    * @returns Promise<string> Formatted completion message
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const result = params.result as string;
     
     // Validate that result is not empty

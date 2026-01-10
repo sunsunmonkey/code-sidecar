@@ -36,7 +36,7 @@ export interface ErrorContext {
   timestamp: Date;
   userMessage?: string;
   stackTrace?: string;
-  additionalInfo?: Record<string, any>;
+  additionalInfo?: Record<string, unknown>;
 }
 
 export interface ErrorResponse {

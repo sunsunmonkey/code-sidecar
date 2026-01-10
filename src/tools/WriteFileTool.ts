@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
+import { resolveWorkspacePath } from './pathValidation';
 
 /**
  * WriteFileTool - writes content to a file, creating directories as needed
@@ -33,35 +34,6 @@ export class WriteFileTool extends BaseTool {
 
 
   /**
-   * Validate and normalize file path to prevent path traversal attacks
-   * Requirements: 13.4
-   */
-  private validatePath(filePath: string): string {
-    // Get workspace folder
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error('No workspace folder is open');
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    
-    // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(filePath) 
-      ? filePath 
-      : path.join(workspaceRoot, filePath);
-    
-    // Normalize the path to resolve .. and .
-    const normalizedPath = path.normalize(resolvedPath);
-    
-    // Check if the normalized path is within the workspace
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(`Access denied: Path '${filePath}' is outside the workspace`);
-    }
-    
-    return normalizedPath;
-  }
-
-  /**
    * Create parent directories if they don't exist
    */
   private async ensureDirectoryExists(filePath: string): Promise<void> {
@@ -81,13 +53,13 @@ export class WriteFileTool extends BaseTool {
    * Execute the write_file tool
    * Requirements: 13.2, 13.4
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const filePath = params.path as string;
     const content = params.content as string;
     
     try {
       // Validate and normalize the path
-      const validatedPath = this.validatePath(filePath);
+      const validatedPath = resolveWorkspacePath(filePath);
       
       // Ensure parent directories exist
       await this.ensureDirectoryExists(validatedPath);

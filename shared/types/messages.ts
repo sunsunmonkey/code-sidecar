@@ -9,7 +9,14 @@ import type { TaskDiff } from "./diff";
 import type { ToolResult, ToolUse } from "./tools";
 
 export type { ApiConfiguration } from "./api";
-export type { ConversationSummary, DisplayMessage, MessageRole } from "./conversation";
+export type {
+  ConversationSummary,
+  DisplayMessage,
+  HistoryItem,
+  HistoryRole,
+  MessageBase,
+  MessageRole,
+} from "./conversation";
 export type { AgentConfiguration, ValidationErrors } from "./config";
 export type { ErrorPayload, ErrorType } from "./errors";
 export type { TaskDiff } from "./diff";

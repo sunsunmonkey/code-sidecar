@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
+import { resolveWorkspacePath } from './pathValidation';
 
 /**
  * ListCodeDefinitionNamesTool - retrieves code definitions (classes, functions, etc.) from a file
@@ -107,42 +107,15 @@ export class ListCodeDefinitionNamesTool extends BaseTool {
   }
 
   /**
-   * Validate and resolve file path
-   */
-  private resolveFilePath(filePath: string): vscode.Uri {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error('No workspace folder is open');
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    
-    // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(filePath) 
-      ? filePath 
-      : path.join(workspaceRoot, filePath);
-    
-    // Normalize the path
-    const normalizedPath = path.normalize(resolvedPath);
-    
-    // Check if the normalized path is within the workspace
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(`Access denied: Path '${filePath}' is outside the workspace`);
-    }
-    
-    return vscode.Uri.file(normalizedPath);
-  }
-
-  /**
    * Execute the list_code_definition_names tool
    * Requirements: 13.6
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const filePath = params.path as string;
     
     try {
       // Validate and resolve the file path
-      const uri = this.resolveFilePath(filePath);
+      const uri = vscode.Uri.file(resolveWorkspacePath(filePath));
       
       // Check if file exists
       try {

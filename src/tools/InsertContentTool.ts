@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
-import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
+import { resolveWorkspacePath } from './pathValidation';
 
 
 /**
@@ -40,39 +40,10 @@ export class InsertContentTool extends BaseTool {
 
 
   /**
-   * Validate and normalize file path to prevent path traversal attacks
-   * Requirements: 13.4
-   */
-  private validatePath(filePath: string): string {
-    // Get workspace folder
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error('No workspace folder is open');
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    
-    // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(filePath) 
-      ? filePath 
-      : path.join(workspaceRoot, filePath);
-    
-    // Normalize the path to resolve .. and .
-    const normalizedPath = path.normalize(resolvedPath);
-    
-    // Check if the normalized path is within the workspace
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(`Access denied: Path '${filePath}' is outside the workspace`);
-    }
-    
-    return normalizedPath;
-  }
-
-  /**
    * Execute the insert_content tool
    * Requirements: 13.3
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const filePath = params.path as string;
     const lineNumber = params.line as number;
     const content = params.content as string;
@@ -84,7 +55,7 @@ export class InsertContentTool extends BaseTool {
       }
       
       // Validate and normalize the path
-      const validatedPath = this.validatePath(filePath);
+      const validatedPath = resolveWorkspacePath(filePath);
       
       // Read the file
       const uri = vscode.Uri.file(validatedPath);

@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as path from 'path';
 import { BaseTool, ParameterDefinition } from './Tool';
+import { resolveWorkspacePath } from './pathValidation';
 
 /**
  * ListFilesTool - lists directory contents with optional recursion
@@ -28,40 +29,6 @@ export class ListFilesTool extends BaseTool {
       description: 'Whether to list files recursively (default: false)',
     },
   ];
-
-  /**
-   * Validate and normalize directory path to prevent path traversal attacks
-   * Requirements: 13.4
-   */
-  private validatePath(dirPath: string): string {
-    // Get workspace folder
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    if (!workspaceFolders || workspaceFolders.length === 0) {
-      throw new Error('No workspace folder is open');
-    }
-
-    const workspaceRoot = workspaceFolders[0].uri.fsPath;
-    
-    // Handle "." as current workspace
-    if (dirPath === '.') {
-      return workspaceRoot;
-    }
-    
-    // Resolve the path relative to workspace root
-    const resolvedPath = path.isAbsolute(dirPath) 
-      ? dirPath 
-      : path.join(workspaceRoot, dirPath);
-    
-    // Normalize the path to resolve .. and .
-    const normalizedPath = path.normalize(resolvedPath);
-    
-    // Check if the normalized path is within the workspace
-    if (!normalizedPath.startsWith(workspaceRoot)) {
-      throw new Error(`Access denied: Path '${dirPath}' is outside the workspace`);
-    }
-    
-    return normalizedPath;
-  }
 
   /**
    * List directory contents non-recursively
@@ -144,7 +111,7 @@ export class ListFilesTool extends BaseTool {
     throw new Error('Invalid recursive flag');
   }
 
-  override validate(params: Record<string, any>): boolean {
+  override validate(params: Record<string, unknown>): boolean {
     if (!params || typeof params.path !== 'string') {
       return false;
     }
@@ -164,13 +131,13 @@ export class ListFilesTool extends BaseTool {
    * Execute the list_files tool
    * Requirements: 13.4
    */
-  async execute(params: Record<string, any>): Promise<string> {
+  async execute(params: Record<string, unknown>): Promise<string> {
     const dirPath = params.path as string;
     const recursive = this.normalizeRecursive(params.recursive);
     
     try {
       // Validate and normalize the path
-      const validatedPath = this.validatePath(dirPath);
+      const validatedPath = resolveWorkspacePath(dirPath);
       
       // Check if path exists and is a directory
       const uri = vscode.Uri.file(validatedPath);
