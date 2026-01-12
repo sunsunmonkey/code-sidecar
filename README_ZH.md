@@ -1,66 +1,79 @@
-ï»¿# code-sidecar ğŸï¸
+# code-sidecar ???
 
-[English](README.md) | ä¸­æ–‡
+[English](README.md) | ÖĞÎÄ
 
-code-sidecar æ˜¯ä¸€ä¸ª VS Code æ‰©å±•é¡¹ç›®ï¼Œæä¾›è½»é‡çš„ sidecar å·¥ä½œæµï¼ŒåŒ…å« webview UIã€æ ¸å¿ƒä»»åŠ¡æ‰§è¡Œå™¨ï¼Œä»¥åŠç”¨äº LLM è¾…åŠ©æ“ä½œçš„å·¥å…·é€‚é…å±‚ã€‚
+code-sidecar ÊÇÒ»¸ö VS Code À©Õ¹ÏîÄ¿£¬Ìá¹©ÇáÁ¿µÄ sidecar ¹¤×÷Á÷£¬°üº¬ webview UI¡¢ºËĞÄÈÎÎñÖ´ĞĞÆ÷£¬ÒÔ¼°ÓÃÓÚ LLM ¸¨Öú²Ù×÷µÄ¹¤¾ßÊÊÅä²ã¡£
 
-## æ¦‚è¿°
+## ¸ÅÊö
 
-- ä»¥å­¦ä¹ å’Œå®éªŒä¸ºä¸»ï¼Œç»“æ„å°½é‡æ¸…æ™°ã€æ˜“ç†è§£ã€‚
-- æ‰©å±•é€»è¾‘ä½äº `src/`ï¼Œå‰ç«¯ UI ä½äº `webview-ui/`ï¼Œä¾¿äºåˆ†å±‚ç»´æŠ¤ã€‚
-- æä¾› LLM ç›¸å…³é…ç½®ä¸æƒé™å¼€å…³ï¼Œä¾¿äºæ§åˆ¶è¡Œä¸ºã€‚
+- ÒÔÑ§Ï°ºÍÊµÑéÎªÖ÷£¬½á¹¹¾¡Á¿ÇåÎú¡¢Ò×Àí½â¡£
+- À©Õ¹Âß¼­Î»ÓÚ `src/`£¬Ç°¶Ë UI Î»ÓÚ `webview-ui/`£¬±ãÓÚ·Ö²ãÎ¬»¤¡£
+- Ìá¹© LLM Ïà¹ØÅäÖÃÓëÈ¨ÏŞ¿ª¹Ø£¬±ãÓÚ¿ØÖÆĞĞÎª¡£
 
-## é¡¹ç›®ç»“æ„
+## ÏîÄ¿½á¹¹
 
-- `src/`: VS Code æ‰©å±•å…¥å£ä¸æ ¸å¿ƒé€»è¾‘ï¼ˆ`extension.ts`ï¼‰
-- `src/core/`: API å¤„ç†ä¸ä»»åŠ¡æ‰§è¡Œ
-- `src/managers/`: å·¥ä½œæµè¾…åŠ©æ¨¡å—
-- `src/tools/`: å·¥å…·é€‚é…å±‚
-- `src/ui/`: ä¾§è¾¹æ ä¸ webview è¿æ¥å±‚
-- `webview-ui/`: React + Vite å®¢æˆ·ç«¯ï¼Œäº§ç‰©è¾“å‡ºåˆ° `webview-ui/dist/`
-- `assets/`: æ´»åŠ¨æ å›¾æ ‡
-- `dist/`: æ„å»ºäº§ç‰©ï¼ˆè‡ªåŠ¨ç”Ÿæˆï¼‰
+- `src/`: VS Code À©Õ¹Èë¿ÚÓëºËĞÄÂß¼­£¨`extension.ts`£©
+- `src/core/`: API ´¦ÀíÓëÈÎÎñÖ´ĞĞ
+- `src/managers/`: ¹¤×÷Á÷¸¨ÖúÄ£¿é
+- `src/tools/`: ¹¤¾ßÊÊÅä²ã
+- `src/ui/`: ²à±ßÀ¸Óë webview Á¬½Ó²ã
+- `webview-ui/`: React + Vite ¿Í»§¶Ë£¬²úÎïÊä³öµ½ `webview-ui/dist/`
+- `assets/`: »î¶¯À¸Í¼±ê
+- `dist/`: ¹¹½¨²úÎï£¨×Ô¶¯Éú³É£©
 
-## å·¥ä½œæµç¨‹ï¼ˆæ¦‚è§ˆï¼‰
+## ¹¤×÷Á÷³Ì£¨¸ÅÀÀ£©
 
-1. æ‰©å±•æ¿€æ´»å¹¶è¯»å–é…ç½®ã€‚
-2. core æ¨¡å—å¤„ç† API è¯·æ±‚å¹¶ç¼–æ’ä»»åŠ¡æµç¨‹ã€‚
-3. webview UI ä¸æ‰©å±•é€šä¿¡ï¼Œè´Ÿè´£ç”¨æˆ·äº¤äº’å±•ç¤ºã€‚
+1. À©Õ¹¼¤»î²¢¶ÁÈ¡ÅäÖÃ¡£
+2. core Ä£¿é´¦Àí API ÇëÇó²¢±àÅÅÈÎÎñÁ÷³Ì¡£
+3. webview UI ÓëÀ©Õ¹Í¨ĞÅ£¬¸ºÔğÓÃ»§½»»¥Õ¹Ê¾¡£
 
-## èŠå¤©æŒ‡ä»¤
+## ÁÄÌìÖ¸Áî
 
-- `/init`ï¼šåœ¨å·¥ä½œåŒºæ ¹ç›®å½•ç”Ÿæˆæˆ–æ›´æ–° `AGENTS.md`ï¼Œæ•´ç†ä»“åº“ç›¸å…³çš„ç®€æ˜è§„èŒƒã€‚
+- `/init`£ºÔÚ¹¤×÷Çø¸ùÄ¿Â¼Éú³É»ò¸üĞÂ `AGENTS.md`£¬ÕûÀí²Ö¿âÏà¹ØµÄ¼òÃ÷¹æ·¶¡£
 
-## é…ç½®é¡¹
+## ÅäÖÃÏî
 
-æœ¬æ‰©å±•æä¾›ä»¥ä¸‹è®¾ç½®ï¼š
+±¾À©Õ¹Ìá¹©ÒÔÏÂÉèÖÃ£º
 
-- `codeSidecar.api.baseUrl`: LLM API è®¿é—®åœ°å€ã€‚
-- `codeSidecar.api.model`: LLM æ¨¡å‹åç§°ã€‚
-- `codeSidecar.api.temperature`: ç”Ÿæˆæ¸©åº¦ï¼ˆ0-2ï¼‰ã€‚
-- `codeSidecar.api.maxTokens`: ç”Ÿæˆ token ä¸Šé™ã€‚
-- `codeSidecar.permissions.allowReadByDefault`: é»˜è®¤å…è®¸è¯»æ–‡ä»¶ã€‚
-- `codeSidecar.permissions.allowWriteByDefault`: é»˜è®¤å…è®¸å†™æ–‡ä»¶ã€‚
-- `codeSidecar.permissions.allowExecuteByDefault`: é»˜è®¤å…è®¸æ‰§è¡Œå‘½ä»¤ã€‚
-- `codeSidecar.permissions.alwaysConfirm`: å§‹ç»ˆéœ€è¦ç¡®è®¤çš„æ“ä½œã€‚
-- `codeSidecar.maxLoopCount`: ReAct å¾ªç¯æœ€å¤§æ¬¡æ•°ã€‚
-- `codeSidecar.contextWindowSize`: ä¸Šä¸‹æ–‡çª—å£æœ€å¤§å­—ç¬¦æ•°ã€‚
+- `codeSidecar.api.baseUrl`: LLM API ·ÃÎÊµØÖ·¡£
+- `codeSidecar.api.model`: LLM Ä£ĞÍÃû³Æ¡£
+- `codeSidecar.api.temperature`: Éú³ÉÎÂ¶È£¨0-2£©¡£
+- `codeSidecar.api.maxTokens`: Éú³É token ÉÏÏŞ¡£
+- `codeSidecar.permissions.allowReadByDefault`: Ä¬ÈÏÔÊĞí¶ÁÎÄ¼ş¡£
+- `codeSidecar.permissions.allowWriteByDefault`: Ä¬ÈÏÔÊĞíĞ´ÎÄ¼ş¡£
+- `codeSidecar.permissions.allowExecuteByDefault`: Ä¬ÈÏÔÊĞíÖ´ĞĞÃüÁî¡£
+- `codeSidecar.permissions.alwaysConfirm`: Ê¼ÖÕĞèÒªÈ·ÈÏµÄ²Ù×÷¡£
+- `codeSidecar.maxLoopCount`: ReAct Ñ­»·×î´ó´ÎÊı¡£
+- `codeSidecar.contextWindowSize`: ÉÏÏÂÎÄ´°¿Ú×î´ó×Ö·ûÊı¡£
 
-## å¼€å‘ä¸æµ‹è¯•
+## ¿ª·¢Óë²âÊÔ
 
-- å®‰è£…ä¾èµ–ï¼š`pnpm install`
-- ç±»å‹æ£€æŸ¥/æ„å»ºï¼š`pnpm run compile`
-- ç›‘å¬æ¨¡å¼ï¼š`pnpm run watch`
-- ä»… lintï¼š`pnpm run lint`
-- ä»…ç±»å‹æ£€æŸ¥ï¼š`pnpm run check-types`
-- æµ‹è¯•ï¼šå…ˆ `pnpm run compile-tests`ï¼Œå†æ‰§è¡Œ `pnpm test`
+- °²×°ÒÀÀµ£º`pnpm install`
+- ÀàĞÍ¼ì²é/¹¹½¨£º`pnpm run compile`
+- ¼àÌıÄ£Ê½£º`pnpm run watch`
+- ½ö lint£º`pnpm run lint`
+- ½öÀàĞÍ¼ì²é£º`pnpm run check-types`
+- ²âÊÔ£ºÏÈ `pnpm run compile-tests`£¬ÔÙÖ´ĞĞ `pnpm test`
 
-## å½“å‰çŠ¶æ€
+## µ±Ç°×´Ì¬
 
-- æœ¬é¡¹ç›®ä¸»è¦æ˜¯æˆ‘çš„æ¯•ä¸šè®¾è®¡ï¼Œä¾§é‡å­¦ä¹ ç”¨é€”ã€‚
-- å†…å®¹è®¾è®¡ç›¸å¯¹ç®€å•ã€‚
-- ç›®å‰ä»åœ¨å®Œå–„ä¸­ï¼Œå±äº WIP çŠ¶æ€ã€‚
+- ±¾ÏîÄ¿Ö÷ÒªÊÇÎÒµÄ±ÏÒµÉè¼Æ£¬²àÖØÑ§Ï°ÓÃÍ¾¡£
+- ÄÚÈİÉè¼ÆÏà¶Ô¼òµ¥¡£
+- Ä¿Ç°ÈÔÔÚÍêÉÆÖĞ£¬ÊôÓÚ WIP ×´Ì¬¡£
 
-## æ„å»ºè¯´æ˜
+## ¹¹½¨ËµÃ÷
 
-- é¡¹ç›®å¼€å‘ä¸æ„å»ºè¿‡ç¨‹ä¸­ä¸»è¦ä½¿ç”¨äº† kiro å’Œ codex ä½œä¸ºè¾…åŠ©ç¼–ç¨‹å·¥å…·ã€‚
+- ÏîÄ¿¿ª·¢Óë¹¹½¨¹ı³ÌÖĞÖ÷ÒªÊ¹ÓÃÁË kiro ºÍ codex ×÷Îª¸¨Öú±à³Ì¹¤¾ß¡£
+
+## Context References
+
+- @file path/to/file: Inject the referenced file content into the prompt context.
+- @file "path with spaces": Quote paths that contain spaces.
+- @workspace: Inject an expanded workspace structure snapshot into the prompt context.
+- @workspace path/to/dir: Include a workspace tree rooted at a specific folder.
+- @workspace:6 or @workspace(6): Request a custom workspace depth.
+- @workspace:6 path/to/dir: Combine a depth override with a specific folder.
+
+
+
+

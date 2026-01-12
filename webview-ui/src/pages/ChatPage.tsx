@@ -1,6 +1,7 @@
-import { useState, useCallback } from "react";
+import { useCallback, useMemo, useRef, useState } from "react";
 import { MessageList } from "../components/MessageList";
 import { InputBox } from "../components/InputBox";
+import type { MentionSuggestion } from "../components/InputBox";
 import { ModeSelector } from "../components/ModeSelector";
 import { ConversationList } from "../components/ConversationList";
 import { Settings2, Motorbike } from "lucide-react";
@@ -14,6 +15,7 @@ import type {
   TokenUsageSnapshot,
   PermissionRequestWithId,
   TaskDiff,
+  WorkspaceReferenceItem,
 } from "code-sidecar-shared/types/messages";
 import { vscode } from "../utils/vscode";
 import { logger } from "code-sidecar-shared/utils/logger";
@@ -25,12 +27,59 @@ interface ChatPageProps {
   onOpenConfig: () => void;
 }
 
+const WORKSPACE_SEARCH_DELAY_MS = 120;
+const WORKSPACE_SEARCH_LIMIT = 60;
+
+function buildMentionSuggestions(
+  matches: WorkspaceReferenceItem[],
+  query: string | null
+): MentionSuggestion[] {
+  const normalizedQuery = query?.toLowerCase() ?? "";
+  const shouldIncludeWorkspace =
+    normalizedQuery.length > 0 && "workspace".startsWith(normalizedQuery);
+  const baseSuggestions: MentionSuggestion[] = shouldIncludeWorkspace
+    ? [
+        {
+          id: "workspace-root",
+          label: "@workspace",
+          description: "Workspace structure",
+          insertText: "@workspace",
+          type: "workspace",
+        },
+      ]
+    : [];
+
+  const matchSuggestions = matches.map((match) => {
+    const needsQuotes = /\s/.test(match.path);
+    const referencePath = needsQuotes ? `"${match.path}"` : match.path;
+    const isFile = match.type === "file";
+    const insertText = isFile
+      ? `@file ${referencePath}`
+      : `@workspace ${referencePath}`;
+    return {
+      id: `${match.type}:${match.path}`,
+      label: match.label,
+      description: isFile ? "file" : "folder",
+      insertText,
+      type: match.type,
+    };
+  });
+
+  return [...baseSuggestions, ...matchSuggestions];
+}
+
 export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [currentMode, setCurrentMode] = useState<WorkMode>("code");
   const [inputValue, setInputValue] = useState<string>("");
   const [tokenUsage, setTokenUsage] = useState<TokenUsageSnapshot | null>(null);
+  const [workspaceMatches, setWorkspaceMatches] = useState<
+    WorkspaceReferenceItem[]
+  >([]);
+  const [mentionQuery, setMentionQuery] = useState<string | null>(null);
+  const workspaceSearchRequestRef = useRef<string | null>(null);
+  const workspaceSearchTimerRef = useRef<number | null>(null);
 
   /**
    * Handle messages from the extension
@@ -95,6 +144,11 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
 
       case "token_usage":
         setTokenUsage(message.usage);
+        break;
+      case "workspace_search_result":
+        if (message.requestId === workspaceSearchRequestRef.current) {
+          setWorkspaceMatches(message.matches);
+        }
         break;
     }
   }, []);
@@ -418,6 +472,38 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
     []
   );
 
+  const requestWorkspaceSearch = useCallback((query: string | null) => {
+    if (workspaceSearchTimerRef.current !== null) {
+      window.clearTimeout(workspaceSearchTimerRef.current);
+      workspaceSearchTimerRef.current = null;
+    }
+
+    if (query === null) {
+      workspaceSearchRequestRef.current = null;
+      setWorkspaceMatches([]);
+      setMentionQuery(null);
+      return;
+    }
+
+    setMentionQuery(query);
+    const requestId = `workspace-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    workspaceSearchRequestRef.current = requestId;
+    workspaceSearchTimerRef.current = window.setTimeout(() => {
+      vscode.postMessage({
+        type: "workspace_search",
+        requestId,
+        query,
+        limit: WORKSPACE_SEARCH_LIMIT,
+      });
+    }, WORKSPACE_SEARCH_DELAY_MS);
+  }, []);
+
+  const mentionSuggestions = useMemo<MentionSuggestion[]>(() => {
+    return buildMentionSuggestions(workspaceMatches, mentionQuery);
+  }, [mentionQuery, workspaceMatches]);
+
   /**
    * Set up message listener and load conversation history
    */
@@ -478,6 +564,8 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
               isProcessing={isProcessing}
               inputValue={inputValue}
               setInputValue={setInputValue}
+              mentionSuggestions={mentionSuggestions}
+              onMentionQuery={requestWorkspaceSearch}
               className="flex-1 min-w-[260px]"
               modeSelector={
                 <ModeSelector

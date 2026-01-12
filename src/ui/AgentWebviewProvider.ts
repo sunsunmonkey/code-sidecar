@@ -21,6 +21,7 @@ import type { WorkMode } from "code-sidecar-shared/types/modes";
 import { PromptBuilder } from "../managers/PromptBuilder";
 import { PermissionManager } from "../managers/PermissionManager";
 import { ContextCollector } from "../managers/ContextCollector";
+import { WorkspaceSearchManager } from "../managers/WorkspaceSearchManager";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { AppError, ErrorHandler } from "../managers";
@@ -47,6 +48,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private promptBuilder: PromptBuilder;
   private permissionManager: PermissionManager;
   private contextCollector: ContextCollector;
+  private workspaceSearchManager: WorkspaceSearchManager;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
   private conversationController: ConversationController;
@@ -81,6 +83,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     // Initialize context collector
     this.contextCollector = new ContextCollector();
+    this.workspaceSearchManager = new WorkspaceSearchManager();
 
     // Initialize conversation history manager
     this.conversationHistoryManager = new ConversationHistoryManager(context);
@@ -265,6 +268,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.messageHandlerRegistry.register("user_message", (message) =>
       this.handleUserMessage(message)
     );
+    this.messageHandlerRegistry.register("workspace_search", (message) =>
+      this.handleWorkspaceSearch(message)
+    );
   }
 
   private async handleMessage(message: UserMessage): Promise<void> {
@@ -315,6 +321,29 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       displayMessage
     );
     await this.currentTask.start();
+  }
+
+  private async handleWorkspaceSearch(
+    message: Extract<UserMessage, { type: "workspace_search" }>
+  ): Promise<void> {
+    try {
+      const matches = await this.workspaceSearchManager.search(
+        message.query,
+        message.limit
+      );
+      this.postMessageToWebview({
+        type: "workspace_search_result",
+        requestId: message.requestId,
+        matches,
+      });
+    } catch (error) {
+      logger.debug("[AgentWebviewProvider] Workspace search failed:", error);
+      this.postMessageToWebview({
+        type: "workspace_search_result",
+        requestId: message.requestId,
+        matches: [],
+      });
+    }
   }
 
   private buildErrorPayload(

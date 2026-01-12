@@ -31,6 +31,15 @@ code-sidecar is a VS Code extension project that provides a lightweight sidecar 
 
 - `/init`: Generate or update `AGENTS.md` at the workspace root with concise, repo-specific guidance.
 
+## Context References
+
+- `@file path/to/file`: Include the referenced file content in the prompt context.
+- `@file "path with spaces"`: Quote paths that contain spaces.
+- `@workspace`: Include an expanded workspace structure snapshot in the prompt context.
+- `@workspace path/to/dir`: Include a workspace tree rooted at a specific folder.
+- `@workspace:6` or `@workspace(6)`: Request a custom workspace depth.
+- `@workspace:6 path/to/dir`: Combine a depth override with a specific folder.
+
 ## Configuration
 
 This extension contributes these settings:

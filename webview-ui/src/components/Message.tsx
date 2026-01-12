@@ -121,6 +121,8 @@ export const Message: React.FC<MessageProps> = ({
     isStreaming,
     permissionRequest,
   } = message;
+  const hasToolCalls = !!(toolCalls && toolCalls.length > 0);
+  const hasToolResults = !!(toolResults && toolResults.length > 0);
   const isPermissionMessage = role === "permission" && !!permissionRequest;
   const isPermissionResponded = isPermissionMessage && content !== "";
   const completionToolCall = toolCalls?.find(
@@ -415,8 +417,9 @@ export const Message: React.FC<MessageProps> = ({
     );
   }
 
-  const hasToolCalls = toolCalls && toolCalls.length > 0;
-  const hasToolResults = toolResults && toolResults.length > 0;
+  if (!cleanedContent && !hasToolCalls && !hasToolResults && !isError) {
+    return null;
+  }
   const roleMeta = {
     user: { label: "User", icon: <User size={14} strokeWidth={2.2} /> },
     assistant: {

@@ -107,7 +107,7 @@ export class Task {
       this.toolExecutor.setFileChangeTracker(this.diffTracker);
       // Collect context before starting
       logger.debug(`[Task ${this.id}] Collecting project context...`);
-      const context = await this.contextCollector.collectContext();
+      const context = await this.contextCollector.collectContext(this.message);
 
       this.context = context;
       const formattedContext = this.contextCollector.formatContext(context);

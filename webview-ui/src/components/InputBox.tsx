@@ -7,7 +7,14 @@ import React, {
 } from "react";
 import TextareaAutosize from "react-textarea-autosize";
 import type { KeyboardEvent } from "react";
-import { Send, Square, Trash2 } from "lucide-react";
+import {
+  FileText,
+  Folder,
+  LayoutGrid,
+  Send,
+  Square,
+  Trash2,
+} from "lucide-react";
 
 interface InputBoxProps {
   onSend: (message: string) => void;
@@ -16,6 +23,8 @@ interface InputBoxProps {
   isProcessing: boolean;
   inputValue: string;
   setInputValue: (text: string) => void;
+  mentionSuggestions?: MentionSuggestion[];
+  onMentionQuery?: (query: string | null) => void;
   className?: string;
   modeSelector?: React.ReactNode;
 }
@@ -27,6 +36,20 @@ interface SlashCommand {
   insertText: string;
 }
 
+export interface MentionSuggestion {
+  id: string;
+  label: string;
+  description: string;
+  insertText: string;
+  type: "file" | "directory" | "workspace";
+}
+
+interface MentionState {
+  startIndex: number;
+  endIndex: number;
+  query: string;
+}
+
 const SLASH_COMMANDS: SlashCommand[] = [
   {
     id: "init",
@@ -35,6 +58,39 @@ const SLASH_COMMANDS: SlashCommand[] = [
     insertText: "/init ",
   },
 ];
+
+function getMentionState(value: string, cursor: number): MentionState | null {
+  const uptoCursor = value.slice(0, cursor);
+  const atIndex = uptoCursor.lastIndexOf("@");
+  if (atIndex < 0) {
+    return null;
+  }
+  if (atIndex > 0 && /[A-Za-z0-9]/.test(value[atIndex - 1])) {
+    return null;
+  }
+  const query = uptoCursor.slice(atIndex + 1);
+  if (/\s/.test(query)) {
+    return null;
+  }
+  return {
+    startIndex: atIndex,
+    endIndex: cursor,
+    query,
+  };
+}
+
+function getMentionIcon(type: MentionSuggestion["type"]): typeof FileText {
+  switch (type) {
+    case "file":
+      return FileText;
+    case "directory":
+      return Folder;
+    case "workspace":
+      return LayoutGrid;
+    default:
+      return LayoutGrid;
+  }
+}
 
 /**
  * InputBox component for user input with multi-line support
@@ -47,12 +103,17 @@ export const InputBox: React.FC<InputBoxProps> = ({
   isProcessing,
   inputValue,
   setInputValue,
+  mentionSuggestions: mentionSuggestionsProp,
+  onMentionQuery,
   className,
   modeSelector,
 }) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
+  const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const lastCommandQueryRef = useRef("");
+  const lastMentionQueryRef = useRef<string | null>(null);
+  const [cursorPosition, setCursorPosition] = useState(0);
   const commandInput = useMemo(() => inputValue.trimStart(), [inputValue]);
   const shouldShowCommands =
     commandInput.startsWith("/") && !/\s/.test(commandInput.slice(1));
@@ -75,6 +136,21 @@ export const InputBox: React.FC<InputBoxProps> = ({
   const activeCommandIndex = hasCommandSuggestions
     ? Math.min(selectedCommandIndex, filteredCommands.length - 1)
     : 0;
+  const mentionSuggestions = mentionSuggestionsProp ?? [];
+
+  const mentionState = useMemo(
+    () => getMentionState(inputValue, cursorPosition),
+    [cursorPosition, inputValue]
+  );
+  const mentionQuery = mentionState?.query ?? null;
+  const hasMentionQuery = Boolean(mentionQuery && mentionQuery.length > 0);
+  const shouldShowMentionHint = Boolean(mentionState && !hasMentionQuery);
+  const activeMentionSuggestions =
+    mentionState && hasMentionQuery ? mentionSuggestions : [];
+  const hasMentionSuggestions = activeMentionSuggestions.length > 0;
+  const activeMentionIndex = hasMentionSuggestions
+    ? Math.min(selectedMentionIndex, activeMentionSuggestions.length - 1)
+    : 0;
 
   const applyCommand = useCallback(
     (command: SlashCommand) => {
@@ -83,6 +159,33 @@ export const InputBox: React.FC<InputBoxProps> = ({
       requestAnimationFrame(() => textareaRef.current?.focus());
     },
     [inputValue, setInputValue]
+  );
+
+  const applyMention = useCallback(
+    (suggestion: MentionSuggestion) => {
+      if (!mentionState) {
+        return;
+      }
+      const prefix = inputValue.slice(0, mentionState.startIndex);
+      const suffix = inputValue.slice(mentionState.endIndex);
+      const needsSpace = suffix.length > 0 && !suffix.startsWith(" ");
+      const spacer = needsSpace ? " " : "";
+      const nextValue = `${prefix}${suggestion.insertText}${spacer}${suffix}`;
+      const nextCursorPosition =
+        prefix.length + suggestion.insertText.length + spacer.length;
+      setInputValue(nextValue);
+      requestAnimationFrame(() => {
+        if (textareaRef.current) {
+          textareaRef.current.focus();
+          textareaRef.current.setSelectionRange(
+            nextCursorPosition,
+            nextCursorPosition
+          );
+        }
+        setCursorPosition(nextCursorPosition);
+      });
+    },
+    [inputValue, mentionState, setInputValue]
   );
 
   const syncCommandSelection = useCallback((nextValue: string) => {
@@ -97,6 +200,19 @@ export const InputBox: React.FC<InputBoxProps> = ({
 
     lastCommandQueryRef.current = nextQuery;
   }, []);
+
+  useEffect(() => {
+    if (!onMentionQuery) {
+      return;
+    }
+    const nextQuery = hasMentionQuery ? mentionQuery : null;
+    if (nextQuery === lastMentionQueryRef.current) {
+      return;
+    }
+    setSelectedMentionIndex(0);
+    lastMentionQueryRef.current = nextQuery;
+    onMentionQuery(nextQuery);
+  }, [hasMentionQuery, mentionQuery, onMentionQuery]);
 
   /**
    * Handle send button click
@@ -123,7 +239,42 @@ export const InputBox: React.FC<InputBoxProps> = ({
       }
       const isComposing = e.nativeEvent?.isComposing ?? false;
 
+      if (hasMentionSuggestions && !isComposing) {
+        const activeMention = activeMentionSuggestions[activeMentionIndex];
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSelectedMentionIndex(
+            (prev) => (prev + 1) % activeMentionSuggestions.length
+          );
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSelectedMentionIndex(
+            (prev) =>
+              (prev - 1 + activeMentionSuggestions.length) %
+              activeMentionSuggestions.length
+          );
+          return;
+        }
+        if (e.key === "Tab") {
+          e.preventDefault();
+          if (activeMention) {
+            applyMention(activeMention);
+          }
+          return;
+        }
+        if (e.key === "Enter" && !e.shiftKey && !e.ctrlKey && !e.metaKey) {
+          e.preventDefault();
+          if (activeMention) {
+            applyMention(activeMention);
+          }
+          return;
+        }
+      }
+
       if (hasCommandSuggestions && !isComposing) {
+        const activeCommand = filteredCommands[activeCommandIndex];
         if (e.key === "ArrowDown") {
           e.preventDefault();
           setSelectedCommandIndex(
@@ -141,9 +292,8 @@ export const InputBox: React.FC<InputBoxProps> = ({
         }
         if (e.key === "Tab") {
           e.preventDefault();
-          const command = filteredCommands[activeCommandIndex];
-          if (command) {
-            applyCommand(command);
+          if (activeCommand) {
+            applyCommand(activeCommand);
           }
           return;
         }
@@ -153,9 +303,8 @@ export const InputBox: React.FC<InputBoxProps> = ({
           );
           if (!isExactMatch) {
             e.preventDefault();
-            const command = filteredCommands[activeCommandIndex];
-            if (command) {
-              applyCommand(command);
+            if (activeCommand) {
+              applyCommand(activeCommand);
             }
             return;
           }
@@ -183,14 +332,16 @@ export const InputBox: React.FC<InputBoxProps> = ({
     },
     [
       activeCommandIndex,
+      activeMentionIndex,
+      activeMentionSuggestions,
+      applyMention,
       applyCommand,
       commandInput,
       filteredCommands,
       handleSend,
       hasCommandSuggestions,
-      inputValue,
+      hasMentionSuggestions,
       isProcessing,
-      selectedCommandIndex,
     ]
   );
 
@@ -200,11 +351,22 @@ export const InputBox: React.FC<InputBoxProps> = ({
   const handleInputChange = useCallback(
     (e: React.ChangeEvent<HTMLTextAreaElement>) => {
       const newValue = e.target.value;
+      const nextCursorPosition = e.target.selectionStart ?? newValue.length;
       syncCommandSelection(newValue);
+      setCursorPosition(nextCursorPosition);
       setInputValue(newValue);
     },
-    [setInputValue, syncCommandSelection]
+    [setCursorPosition, setInputValue, syncCommandSelection]
   );
+
+  const handleSelectionChange = useCallback(() => {
+    if (!textareaRef.current) {
+      return;
+    }
+    const nextCursorPosition =
+      textareaRef.current.selectionStart ?? textareaRef.current.value.length;
+    setCursorPosition(nextCursorPosition);
+  }, []);
 
   /**
    * Focus input on mount
@@ -234,7 +396,48 @@ export const InputBox: React.FC<InputBoxProps> = ({
     >
       <div className="flex flex-col gap-1.5">
         <div className="relative">
-          {hasCommandSuggestions && (
+          {shouldShowMentionHint ? (
+            <div className="absolute left-0 right-0 bottom-full mb-2 z-10">
+              <div className="flex flex-col gap-1 rounded-lg bg-[var(--vscode-editorWidget-background)] px-2 py-2 shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
+                <div className="px-2 py-1 text-[11px] text-[var(--vscode-descriptionForeground)]">
+                  输入相关内容以搜索文件
+                </div>
+              </div>
+            </div>
+          ) : hasMentionSuggestions ? (
+            <div className="absolute left-0 right-0 bottom-full mb-2 z-10">
+              <div className="flex flex-col gap-1 rounded-lg bg-[var(--vscode-editorWidget-background)] px-2 py-1.5 shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
+                <div className="flex flex-col gap-1 max-h-44 overflow-auto">
+                  {activeMentionSuggestions.map((suggestion, index) => {
+                    const isSelected = index === activeMentionIndex;
+                    const Icon = getMentionIcon(suggestion.type);
+                    return (
+                      <button
+                        key={suggestion.id}
+                        type="button"
+                        className={`flex items-center gap-2 rounded px-2 py-1 text-left text-[11px] transition-colors ${
+                          isSelected
+                            ? "bg-[var(--vscode-list-hoverBackground)] text-[var(--vscode-foreground)]"
+                            : "text-[var(--vscode-descriptionForeground)] hover:bg-[var(--vscode-list-hoverBackground)]"
+                        }`}
+                        onClick={() => applyMention(suggestion)}
+                      >
+                        <span className="flex h-6 w-6 items-center justify-center rounded bg-[var(--vscode-badge-background)] text-[var(--vscode-badge-foreground)]">
+                          <Icon size={14} strokeWidth={2} />
+                        </span>
+                        <span className="truncate font-semibold text-[var(--vscode-foreground)]">
+                          {suggestion.label}
+                        </span>
+                        <span className="truncate text-[var(--vscode-descriptionForeground)]">
+                          {suggestion.description}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+          ) : hasCommandSuggestions ? (
             <div className="absolute left-0 right-0 bottom-full mb-2 z-10">
               <div className="flex flex-col gap-1 rounded-lg bg-[var(--vscode-editorWidget-background)] px-2 py-1.5 shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
                 <div className="flex flex-col gap-1 max-h-40 overflow-auto">
@@ -263,7 +466,7 @@ export const InputBox: React.FC<InputBoxProps> = ({
                 </div>
               </div>
             </div>
-          )}
+          ) : null}
 
           <TextareaAutosize
             ref={textareaRef}
@@ -272,6 +475,7 @@ export const InputBox: React.FC<InputBoxProps> = ({
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
+            onSelect={handleSelectionChange}
             disabled={isProcessing}
             minRows={3}
             maxRows={15}

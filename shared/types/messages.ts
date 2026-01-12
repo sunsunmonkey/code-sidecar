@@ -30,6 +30,14 @@ export interface TokenUsageSnapshot {
   availableTokens: number;
 }
 
+export type WorkspaceReferenceType = "file" | "directory" | "workspace";
+
+export interface WorkspaceReferenceItem {
+  type: WorkspaceReferenceType;
+  path: string;
+  label: string;
+}
+
 export type ConfigMessage =
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: AgentConfiguration }
@@ -77,7 +85,12 @@ export type WebviewMessage =
   | { type: "validation_error"; errors: ValidationErrors }
   | { type: "token_usage"; usage: TokenUsageSnapshot }
   | { type: "permission_request"; request: PermissionRequestWithId }
-  | { type: "set_input_value"; value: string };
+  | { type: "set_input_value"; value: string }
+  | {
+      type: "workspace_search_result";
+      requestId: string;
+      matches: WorkspaceReferenceItem[];
+    };
 
 export type UserMessage =
   | { type: "user_message"; content: string }
@@ -96,4 +109,10 @@ export type UserMessage =
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: AgentConfiguration }
   | { type: "test_connection"; apiConfig: ApiConfiguration }
-  | { type: "permission_response"; requestId: string; approved: boolean };
+  | { type: "permission_response"; requestId: string; approved: boolean }
+  | {
+      type: "workspace_search";
+      requestId: string;
+      query: string;
+      limit?: number;
+    };

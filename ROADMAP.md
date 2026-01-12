@@ -81,14 +81,14 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
   - 完善 API 调用重试机制
   - 添加用户友好的错误提示
 
-- [X] **代码重构**
+- [x] **代码重构**
   - 提取公共的路径验证工具
   - 统一消息类型 (`HistoryItem`, `DisplayMessage` 等)
   - 清理 `any` 类型
 
 ### Phase 2: 功能增强
 
-- [ ] **上下文管理增强**
+- [x] **上下文管理增强**
 
   - 支持 `@file` 引用文件
   - 支持 `@workspace` 引用工作区结构
@@ -112,7 +112,7 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
 
 - [ ] **TODO List 工具**
 
-  - 实现 `update_todo_list` 工具 (参考 systemPrompt-basic.md)
+  - 实现 `update_todo_list` 工具 
   - UI 展示任务进度
 
 - [ ] **多工作区支持**
@@ -219,3 +219,11 @@ pnpm run compile-tests && pnpm test
 - [VS Code Extension API](https://code.visualstudio.com/api)
 - [Webview UI Toolkit](https://github.com/microsoft/vscode-webview-ui-toolkit)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
+
+
+- After all required files have been modified and before marking the task as complete, ensure that you run the following commands from the repository root directory to verify the changes:
+
+1. pnpm --filter webview-ui build
+2. pnpm esbuild
+3. pnpm tsc
+   These checks are required before considering the changes complete.
