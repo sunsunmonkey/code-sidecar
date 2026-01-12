@@ -43,6 +43,8 @@ const TOOL_TAG_NAMES = [
   "execute_command",
   "get_diagnostics",
   "list_code_definition_names",
+  "git_operations",
+  "update_todo_list",
 ];
 
 const stripTrailingPartialToolTag = (input: string): string => {

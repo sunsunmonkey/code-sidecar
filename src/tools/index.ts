@@ -14,3 +14,5 @@ export { SearchFilesTool } from './SearchFilesTool';
 export { ExecuteCommandTool } from './ExecuteCommandTool';
 export { GetDiagnosticsTool } from './GetDiagnosticsTool';
 export { ListCodeDefinitionNamesTool } from './ListCodeDefinitionNamesTool';
+export { GitOperationsTool } from './GitOperationsTool';
+export { UpdateTodoListTool } from './UpdateTodoListTool';

@@ -9,6 +9,14 @@ import { tryResolveWorkspacePath } from "./pathValidation";
 
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
 import type { PermissionRequest } from "code-sidecar-shared/types/messages";
+
+const GIT_READ_OPERATIONS = new Set([
+  "status",
+  "diff",
+  "log",
+  "branch",
+  "show",
+]);
 /**
  * ToolExecutor manages tool registration and execution
  * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 13.7, 5.1, 5.2
@@ -247,6 +255,13 @@ export class ToolExecutor {
       operation = "delete";
     } else if (tool.name.includes("execute") || tool.name.includes("command")) {
       operation = "execute";
+    }
+    if (tool.name === "git_operations") {
+      const gitOperation =
+        typeof toolUse.params.operation === "string"
+          ? toolUse.params.operation.toLowerCase()
+          : "";
+      operation = GIT_READ_OPERATIONS.has(gitOperation) ? "read" : "write";
     }
 
     // Extract target from common parameter names

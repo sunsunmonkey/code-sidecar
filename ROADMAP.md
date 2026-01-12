@@ -47,10 +47,10 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
 
 ### 高优先级
 
-| 问题                 | 位置                                          | 描述                                                         |
-| -------------------- | --------------------------------------------- | ------------------------------------------------------------ |
-| 缓存优化             | [task.ts#L349](src/core/task.ts#L349)         | TODO: 系统提示缓存机制需要评估是否有效                       |
-| 消息类型收口         | [apiHandler.ts#L9](src/core/apiHandler.ts#L9) | TODO: 需要统一消息类型定义                                   |
+| 问题         | 位置                                          | 描述                                   |
+| ------------ | --------------------------------------------- | -------------------------------------- |
+| 缓存优化     | [task.ts#L349](src/core/task.ts#L349)         | TODO: 系统提示缓存机制需要评估是否有效 |
+| 消息类型收口 | [apiHandler.ts#L9](src/core/apiHandler.ts#L9) | TODO: 需要统一消息类型定义             |
 
 ### 中优先级
 
@@ -99,7 +99,6 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
   - `rename_file` - 重命名/移动文件
   - `delete_file` - 删除文件 (高危操作)
   - `run_tests` - 运行测试并获取结果
-  - `git_operations` - Git 基础操作
 
 - [ ] **会话管理增强**
 
@@ -107,12 +106,11 @@ Code-Sidecar 是一个轻量级 VS Code 扩展，提供 LLM 辅助编码的 side
   - 会话导出/导入
   - 会话搜索
 
-
 ### Phase 3: 高级功能
 
-- [ ] **TODO List 工具**
+- [x] **TODO List 工具**
 
-  - 实现 `update_todo_list` 工具 
+  - 实现 `update_todo_list` 工具
   - UI 展示任务进度
 
 - [ ] **多工作区支持**
@@ -219,7 +217,6 @@ pnpm run compile-tests && pnpm test
 - [VS Code Extension API](https://code.visualstudio.com/api)
 - [Webview UI Toolkit](https://github.com/microsoft/vscode-webview-ui-toolkit)
 - [OpenAI API Reference](https://platform.openai.com/docs/api-reference)
-
 
 - After all required files have been modified and before marking the task as complete, ensure that you run the following commands from the repository root directory to verify the changes:
 

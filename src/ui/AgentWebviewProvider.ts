@@ -14,6 +14,8 @@ import {
   ExecuteCommandTool,
   GetDiagnosticsTool,
   ListCodeDefinitionNamesTool,
+  GitOperationsTool,
+  UpdateTodoListTool,
 } from "../tools";
 import { ModeManager } from "../managers/ModeManager";
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
@@ -35,6 +37,7 @@ import type {
   WebviewMessage,
 } from "code-sidecar-shared/types/messages";
 import { ErrorType } from "code-sidecar-shared/types/errors";
+import type { TodoList } from "code-sidecar-shared/types/todo";
 
 /**
  * Agent Webview Provider manages the sidebar panel and task execution
@@ -53,6 +56,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private errorHandler: ErrorHandler;
   private conversationController: ConversationController;
   private messageHandlerRegistry: MessageHandlerRegistry;
+  private todoList: TodoList = { items: [] };
   private apiConfiguration: ApiConfiguration = {
     model: "",
     apiKey: "",
@@ -160,8 +164,17 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.toolExecutor.registerTool(new ExecuteCommandTool());
     this.toolExecutor.registerTool(new GetDiagnosticsTool());
     this.toolExecutor.registerTool(new ListCodeDefinitionNamesTool());
+    this.toolExecutor.registerTool(new GitOperationsTool());
+    this.toolExecutor.registerTool(
+      new UpdateTodoListTool((todoList) => this.updateTodoList(todoList))
+    );
 
     logger.debug(`Registered ${this.toolExecutor.getToolCount()} tools`);
+  }
+
+  private updateTodoList(todoList: TodoList): void {
+    this.todoList = todoList;
+    this.postMessageToWebview({ type: "todo_list_updated", todoList });
   }
 
   resolveWebviewView(

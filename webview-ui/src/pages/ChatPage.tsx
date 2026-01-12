@@ -5,6 +5,7 @@ import type { MentionSuggestion } from "../components/InputBox";
 import { ModeSelector } from "../components/ModeSelector";
 import { ConversationList } from "../components/ConversationList";
 import { Settings2, Motorbike } from "lucide-react";
+import { TodoListPanel } from "../components/TodoListPanel";
 import type {
   DisplayMessage,
   ErrorPayload,
@@ -17,6 +18,7 @@ import type {
   TaskDiff,
   WorkspaceReferenceItem,
 } from "code-sidecar-shared/types/messages";
+import type { TodoList } from "code-sidecar-shared/types/todo";
 import { vscode } from "../utils/vscode";
 import { logger } from "code-sidecar-shared/utils/logger";
 import { useEvent } from "react-use";
@@ -74,6 +76,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   const [currentMode, setCurrentMode] = useState<WorkMode>("code");
   const [inputValue, setInputValue] = useState<string>("");
   const [tokenUsage, setTokenUsage] = useState<TokenUsageSnapshot | null>(null);
+  const [todoList, setTodoList] = useState<TodoList | null>(null);
   const [workspaceMatches, setWorkspaceMatches] = useState<
     WorkspaceReferenceItem[]
   >([]);
@@ -144,6 +147,9 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
 
       case "token_usage":
         setTokenUsage(message.usage);
+        break;
+      case "todo_list_updated":
+        setTodoList(message.todoList);
         break;
       case "workspace_search_result":
         if (message.requestId === workspaceSearchRequestRef.current) {
@@ -348,6 +354,8 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   const sendMessage = (content: string) => {
     if (!content.trim()) return;
 
+    setTodoList(null);
+
     // Add user message to display
     const userMessage: DisplayMessage = {
       id: `msg-${Date.now()}`,
@@ -390,6 +398,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   const handleConversationCleared = () => {
     setMessages([]);
     setIsProcessing(false);
+    setTodoList(null);
     logger.debug("Conversation cleared");
   };
 
@@ -407,6 +416,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
 
     setMessages(convertedMessages);
     setIsProcessing(false);
+    setTodoList(null);
   };
 
   /**
@@ -549,6 +559,7 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
 
         <div className="flex-1 flex flex-col gap-2 p-2 md:p-3 overflow-hidden min-h-0">
           <div className="flex-1 overflow-hidden rounded-lg bg-[var(--vscode-editor-background)] shadow-[0_8px_22px_rgba(0,0,0,0.18)] flex flex-col min-h-0">
+            <TodoListPanel todoList={todoList} />
             <MessageList
               messages={messages}
               onPermissionResponse={handlePermissionResponse}

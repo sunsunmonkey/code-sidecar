@@ -55,6 +55,7 @@ export class ConversationController {
       this.options.postMessage({
         type: "conversation_cleared",
       });
+      this.resetTodoList();
 
       logger.debug("[ConversationController] Conversation cleared");
     } catch (error) {
@@ -79,6 +80,7 @@ export class ConversationController {
       this.options.postMessage({
         type: "conversation_cleared",
       });
+      this.resetTodoList();
 
       this.handleGetConversationList();
 
@@ -149,6 +151,7 @@ export class ConversationController {
       this.options.postMessage({
         type: "conversation_cleared",
       });
+      this.resetTodoList();
 
       logger.debug("[ConversationController] New conversation started");
     } catch (error) {
@@ -221,6 +224,7 @@ export class ConversationController {
 
       if (success) {
         this.handleGetConversationHistory();
+        this.resetTodoList();
 
         logger.debug(
           `[ConversationController] Switched to conversation: ${conversationId}`
@@ -319,5 +323,12 @@ export class ConversationController {
       return content.length > 100 ? content.substring(0, 100) + "..." : content;
     }
     return "Empty conversation";
+  }
+
+  private resetTodoList(): void {
+    this.options.postMessage({
+      type: "todo_list_updated",
+      todoList: { items: [] },
+    });
   }
 }

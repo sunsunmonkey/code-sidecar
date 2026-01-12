@@ -13,3 +13,5 @@ Check [Keep a Changelog](http://keepachangelog.com/) for recommendations on how 
 - Improve error handling with structured error payloads and API retry logic
 - Support @file and @workspace context references in chat prompts
 - Add @ mention suggestions for files and folders in the chat input
+- Add git_operations tool for common Git commands with permission gating
+- Add update_todo_list tool and show task progress in the chat UI

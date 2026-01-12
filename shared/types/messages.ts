@@ -7,6 +7,7 @@ import type { OperationRecord } from "./operations";
 import type { PermissionRequestWithId } from "./permissions";
 import type { TaskDiff } from "./diff";
 import type { ToolResult, ToolUse } from "./tools";
+import type { TodoList } from "./todo";
 
 export type { ApiConfiguration } from "./api";
 export type {
@@ -24,6 +25,7 @@ export type { WorkMode } from "./modes";
 export type { OperationRecord, OperationType } from "./operations";
 export type { PermissionRequest, PermissionRequestWithId } from "./permissions";
 export type { ToolResult, ToolUse } from "./tools";
+export type { TodoItem, TodoList, TodoStatus } from "./todo";
 
 export interface TokenUsageSnapshot {
   totalTokens: number;
@@ -64,6 +66,7 @@ export type WebviewMessage =
   | { type: "task_diff"; diff: TaskDiff }
   | { type: "error"; error: ErrorPayload }
   | { type: "task_complete" }
+  | { type: "todo_list_updated"; todoList: TodoList }
   | { type: "mode_changed"; mode: WorkMode }
   | { type: "conversation_cleared" }
   | { type: "operation_recorded"; operation: OperationRecord }
