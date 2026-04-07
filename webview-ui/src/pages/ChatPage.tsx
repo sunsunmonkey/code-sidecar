@@ -1,7 +1,10 @@
 import { useCallback, useMemo, useRef, useState } from "react";
 import { MessageList } from "../components/MessageList";
 import { InputBox } from "../components/InputBox";
-import type { MentionSuggestion } from "../components/InputBox";
+import type {
+  MentionSuggestion,
+  SkillSuggestion,
+} from "../components/InputBox";
 import { ModeSelector } from "../components/ModeSelector";
 import { ConversationList } from "../components/ConversationList";
 import { Settings2, Motorbike } from "lucide-react";
@@ -15,6 +18,7 @@ import type {
   WorkMode,
   TokenUsageSnapshot,
   PermissionRequestWithId,
+  SkillReferenceItem,
   TaskDiff,
   WorkspaceReferenceItem,
 } from "code-sidecar-shared/types/messages";
@@ -31,6 +35,8 @@ interface ChatPageProps {
 
 const WORKSPACE_SEARCH_DELAY_MS = 120;
 const WORKSPACE_SEARCH_LIMIT = 60;
+const SKILL_SEARCH_DELAY_MS = 120;
+const SKILL_SEARCH_LIMIT = 20;
 
 function buildMentionSuggestions(
   matches: WorkspaceReferenceItem[],
@@ -70,6 +76,18 @@ function buildMentionSuggestions(
   return [...baseSuggestions, ...matchSuggestions];
 }
 
+function buildSkillSuggestions(
+  matches: SkillReferenceItem[]
+): SkillSuggestion[] {
+  return matches.map((match) => ({
+    id: `skill:${match.path}`,
+    label: `/${match.name}`,
+    description: match.description || "workspace skill",
+    insertText: `/${match.name} `,
+    hint: `来自 ${match.path}`,
+  }));
+}
+
 export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   const [messages, setMessages] = useState<DisplayMessage[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -80,9 +98,12 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
   const [workspaceMatches, setWorkspaceMatches] = useState<
     WorkspaceReferenceItem[]
   >([]);
+  const [skillMatches, setSkillMatches] = useState<SkillReferenceItem[]>([]);
   const [mentionQuery, setMentionQuery] = useState<string | null>(null);
   const workspaceSearchRequestRef = useRef<string | null>(null);
   const workspaceSearchTimerRef = useRef<number | null>(null);
+  const skillSearchRequestRef = useRef<string | null>(null);
+  const skillSearchTimerRef = useRef<number | null>(null);
 
   /**
    * Handle messages from the extension
@@ -154,6 +175,11 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
       case "workspace_search_result":
         if (message.requestId === workspaceSearchRequestRef.current) {
           setWorkspaceMatches(message.matches);
+        }
+        break;
+      case "skill_search_result":
+        if (message.requestId === skillSearchRequestRef.current) {
+          setSkillMatches(message.matches);
         }
         break;
     }
@@ -510,9 +536,39 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
     }, WORKSPACE_SEARCH_DELAY_MS);
   }, []);
 
+  const requestSkillSearch = useCallback((query: string | null) => {
+    if (skillSearchTimerRef.current !== null) {
+      window.clearTimeout(skillSearchTimerRef.current);
+      skillSearchTimerRef.current = null;
+    }
+
+    if (query === null) {
+      skillSearchRequestRef.current = null;
+      setSkillMatches([]);
+      return;
+    }
+
+    const requestId = `skill-${Date.now()}-${Math.random()
+      .toString(36)
+      .slice(2, 8)}`;
+    skillSearchRequestRef.current = requestId;
+    skillSearchTimerRef.current = window.setTimeout(() => {
+      vscode.postMessage({
+        type: "skill_search",
+        requestId,
+        query,
+        limit: SKILL_SEARCH_LIMIT,
+      });
+    }, SKILL_SEARCH_DELAY_MS);
+  }, []);
+
   const mentionSuggestions = useMemo<MentionSuggestion[]>(() => {
     return buildMentionSuggestions(workspaceMatches, mentionQuery);
   }, [mentionQuery, workspaceMatches]);
+
+  const skillSuggestions = useMemo<SkillSuggestion[]>(() => {
+    return buildSkillSuggestions(skillMatches);
+  }, [skillMatches]);
 
   /**
    * Set up message listener and load conversation history
@@ -575,6 +631,8 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
               isProcessing={isProcessing}
               inputValue={inputValue}
               setInputValue={setInputValue}
+              skillSuggestions={skillSuggestions}
+              onSlashCommandQuery={requestSkillSearch}
               mentionSuggestions={mentionSuggestions}
               onMentionQuery={requestWorkspaceSearch}
               className="flex-1 min-w-[260px]"

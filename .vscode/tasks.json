@@ -8,7 +8,7 @@
       "dependsOn": [
         "npm: watch:tsc",
         "npm: watch:esbuild",
-        "pnpm: watch:webview"
+        "pnpm: build:webview"
       ],
       "presentation": {
         "reveal": "never"
@@ -19,22 +19,10 @@
       }
     },
     {
-      "label": "pnpm: watch:webview",
+      "label": "pnpm: build:webview",
       "type": "shell",
       "command": "pnpm --filter webview-ui build",
       "group": "build",
-      "problemMatcher": {
-        "owner": "vite",
-        "pattern": {
-          "regexp": "^$"
-        },
-        "background": {
-          "activeOnStart": true,
-          "beginsPattern": ".*VITE.*",
-          "endsPattern": ".*Local:.*"
-        }
-      },
-      "isBackground": true,
       "presentation": {
         "group": "watch",
         "reveal": "always"
@@ -44,7 +32,19 @@
       "type": "npm",
       "script": "watch:esbuild",
       "group": "build",
-      "problemMatcher": "$esbuild-watch",
+      "problemMatcher": {
+        "owner": "esbuild",
+        "fileLocation": "absolute",
+        "pattern": {
+          "regexp": "^✘ \\[ERROR\\] (.+)$",
+          "message": 1
+        },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": "^\\[watch\\] build started$",
+          "endsPattern": "^\\[watch\\] build finished$"
+        }
+      },
       "isBackground": true,
       "label": "npm: watch:esbuild",
       "presentation": {

@@ -30,13 +30,13 @@ code-sidecar is a VS Code extension project that provides a lightweight sidecar 
 ## Chat Commands
 
 - `/init`: Generate or update `AGENTS.md` at the workspace root with concise, repo-specific guidance.
-- `/<skill-name>`: Treat the slash command name as a workspace skill hint. The agent will first try `list_skills` and `load_skill`, then follow the loaded skill before continuing.
+- `/<skill-name>`: Treat the slash command name as a workspace skill hint. The agent will inspect skill folders with normal file tools, read the matching `SKILL.md`, then follow it before continuing.
 
 ## Skills
 
 - Supports Anthropic-compatible skill folders that contain a `SKILL.md` file with YAML frontmatter.
 - Scans these workspace locations: `.agent/skills/`, `.code-sidecar/skills/`, and `skills/`.
-- Exposes two built-in tools for the model: `list_skills` to discover skills and `load_skill` to inject a skill's instructions into the current task context.
+- Skills are consumed through normal file tools by reading the relevant `SKILL.md` and nearby resource files when needed.
 
 ## Context References
 

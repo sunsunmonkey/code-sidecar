@@ -1,6 +1,7 @@
 import * as vscode from "vscode";
 import * as path from "path";
 import type {
+  SkillReferenceItem,
   WorkspaceReferenceItem,
 } from "code-sidecar-shared/types/messages";
 import { getWorkspaceExcludePattern } from "./workspaceIgnore";
@@ -11,8 +12,20 @@ type WorkspaceIndex = {
   timestamp: number;
 };
 
+type SkillIndex = {
+  entries: SkillReferenceItem[];
+  timestamp: number;
+};
+
+const SKILL_GLOBS = [
+  "**/.agent/skills/**/SKILL.md",
+  "**/.code-sidecar/skills/**/SKILL.md",
+  "**/skills/**/SKILL.md",
+];
+
 export class WorkspaceSearchManager {
   private cache?: WorkspaceIndex;
+  private skillCache?: SkillIndex;
   private readonly cacheTtlMs = 60_000;
   private readonly maxIndexEntries = 20000;
 
@@ -53,6 +66,50 @@ export class WorkspaceSearchManager {
     return matches;
   }
 
+  async searchSkills(query: string, limit = 20): Promise<SkillReferenceItem[]> {
+    const entries = await this.getSkillEntries();
+    const normalizedQuery = query.trim().toLowerCase();
+    if (!normalizedQuery) {
+      return entries.slice(0, limit);
+    }
+
+    return entries
+      .map((entry) => {
+        const haystack = `${entry.name} ${entry.path} ${entry.description}`.toLowerCase();
+        const index = haystack.indexOf(normalizedQuery);
+        if (index < 0) {
+          return null;
+        }
+        const exact = entry.name.toLowerCase() === normalizedQuery ? 1 : 0;
+        const prefix = entry.name.toLowerCase().startsWith(normalizedQuery) ? 1 : 0;
+        return { entry, exact, prefix, index };
+      })
+      .filter(
+        (
+          result
+        ): result is {
+          entry: SkillReferenceItem;
+          exact: number;
+          prefix: number;
+          index: number;
+        } => Boolean(result)
+      )
+      .sort((a, b) => {
+        if (a.exact !== b.exact) {
+          return b.exact - a.exact;
+        }
+        if (a.prefix !== b.prefix) {
+          return b.prefix - a.prefix;
+        }
+        if (a.index !== b.index) {
+          return a.index - b.index;
+        }
+        return a.entry.name.localeCompare(b.entry.name);
+      })
+      .slice(0, limit)
+      .map((result) => result.entry);
+  }
+
   private async getEntries(): Promise<WorkspaceReferenceItem[]> {
     const now = Date.now();
     if (this.cache && now - this.cache.timestamp < this.cacheTtlMs) {
@@ -61,6 +118,17 @@ export class WorkspaceSearchManager {
 
     const entries = await this.buildIndex();
     this.cache = { entries, timestamp: now };
+    return entries;
+  }
+
+  private async getSkillEntries(): Promise<SkillReferenceItem[]> {
+    const now = Date.now();
+    if (this.skillCache && now - this.skillCache.timestamp < this.cacheTtlMs) {
+      return this.skillCache.entries;
+    }
+
+    const entries = await this.buildSkillIndex();
+    this.skillCache = { entries, timestamp: now };
     return entries;
   }
 
@@ -121,5 +189,86 @@ export class WorkspaceSearchManager {
     );
 
     return entries;
+  }
+
+  private async buildSkillIndex(): Promise<SkillReferenceItem[]> {
+    const workspaceFolders = vscode.workspace.workspaceFolders;
+    if (!workspaceFolders || workspaceFolders.length === 0) {
+      return [];
+    }
+
+    const workspaceRoot = workspaceFolders[0].uri.fsPath;
+    const exclude = getWorkspaceExcludePattern();
+
+    let skillFiles: vscode.Uri[] = [];
+    try {
+      const nestedResults = await Promise.all(
+        SKILL_GLOBS.map((glob) =>
+          vscode.workspace.findFiles(glob, exclude, this.maxIndexEntries)
+        )
+      );
+      skillFiles = nestedResults.flat();
+    } catch (error) {
+      logger.debug(
+        "[WorkspaceSearchManager] Failed to index workspace skills",
+        error
+      );
+      return [];
+    }
+
+    const deduped = new Map<string, SkillReferenceItem>();
+    for (const uri of skillFiles) {
+      const relativeSkillPath = path.relative(workspaceRoot, uri.fsPath);
+      const skillDir = path.dirname(relativeSkillPath);
+      const fallbackName = path.basename(skillDir);
+      const parsed = await this.readSkillMeta(uri);
+      const name = parsed.name || fallbackName;
+
+      deduped.set(relativeSkillPath, {
+        name,
+        path: relativeSkillPath,
+        description: parsed.description || `Skill in ${skillDir}`,
+      });
+    }
+
+    return Array.from(deduped.values()).sort((a, b) =>
+      a.name.localeCompare(b.name)
+    );
+  }
+
+  private async readSkillMeta(
+    uri: vscode.Uri
+  ): Promise<{ name: string; description: string }> {
+    try {
+      const bytes = await vscode.workspace.fs.readFile(uri);
+      const content = new TextDecoder().decode(bytes).replace(/\r\n/g, "\n");
+      const match = content.match(/^---\n([\s\S]*?)\n---\n?/);
+      if (!match) {
+        return { name: "", description: "" };
+      }
+
+      let name = "";
+      let description = "";
+      for (const line of match[1].split("\n")) {
+        const separatorIndex = line.indexOf(":");
+        if (separatorIndex === -1) {
+          continue;
+        }
+        const key = line.slice(0, separatorIndex).trim();
+        const value = line
+          .slice(separatorIndex + 1)
+          .trim()
+          .replace(/^['"]|['"]$/g, "");
+        if (key === "name") {
+          name = value;
+        } else if (key === "description") {
+          description = value;
+        }
+      }
+
+      return { name, description };
+    } catch {
+      return { name: "", description: "" };
+    }
   }
 }

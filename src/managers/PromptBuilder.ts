@@ -154,7 +154,7 @@ You can:
 - Execute commands in the terminal
 - Access diagnostic information (errors, warnings)
 - Navigate the project structure
-- Discover workspace skills and load their instructions dynamically
+- Inspect workspace skill folders and read their instructions when relevant
 - Provide explanations and suggestions
 
 Your responses should be:
@@ -190,7 +190,7 @@ Your responses should be:
 - Ask for clarification when requirements are unclear
 - Respect user permissions and confirmations
 - Provide reasoning for your actions
-- When a task may benefit from a workspace skill, call \`list_skills\` first and then \`load_skill\` before proceeding
+- When a task may benefit from a workspace skill, use normal file tools to inspect .agent/skills, .code-sidecar/skills, or skills, then read the relevant SKILL.md
 
 ## Mode-Specific Rules:
 ${editRestriction}

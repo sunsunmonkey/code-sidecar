@@ -40,6 +40,12 @@ export interface WorkspaceReferenceItem {
   label: string;
 }
 
+export interface SkillReferenceItem {
+  name: string;
+  path: string;
+  description: string;
+}
+
 export type ConfigMessage =
   | { type: "get_configuration" }
   | { type: "save_configuration"; config: AgentConfiguration }
@@ -93,6 +99,11 @@ export type WebviewMessage =
       type: "workspace_search_result";
       requestId: string;
       matches: WorkspaceReferenceItem[];
+    }
+  | {
+      type: "skill_search_result";
+      requestId: string;
+      matches: SkillReferenceItem[];
     };
 
 export type UserMessage =
@@ -115,6 +126,12 @@ export type UserMessage =
   | { type: "permission_response"; requestId: string; approved: boolean }
   | {
       type: "workspace_search";
+      requestId: string;
+      query: string;
+      limit?: number;
+    }
+  | {
+      type: "skill_search";
       requestId: string;
       query: string;
       limit?: number;

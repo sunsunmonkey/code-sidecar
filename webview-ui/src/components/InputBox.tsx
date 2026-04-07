@@ -23,6 +23,8 @@ interface InputBoxProps {
   isProcessing: boolean;
   inputValue: string;
   setInputValue: (text: string) => void;
+  skillSuggestions?: SkillSuggestion[];
+  onSlashCommandQuery?: (query: string | null) => void;
   mentionSuggestions?: MentionSuggestion[];
   onMentionQuery?: (query: string | null) => void;
   className?: string;
@@ -34,6 +36,15 @@ interface SlashCommand {
   label: string;
   description: string;
   insertText: string;
+  hint?: string;
+}
+
+export interface SkillSuggestion {
+  id: string;
+  label: string;
+  description: string;
+  insertText: string;
+  hint?: string;
 }
 
 export interface MentionSuggestion {
@@ -56,6 +67,7 @@ const SLASH_COMMANDS: SlashCommand[] = [
     label: "/init",
     description: "Generate or update AGENTS.md guidance",
     insertText: "/init ",
+    hint: "内置工作流，会生成或更新 AGENTS.md",
   },
 ];
 
@@ -103,6 +115,8 @@ export const InputBox: React.FC<InputBoxProps> = ({
   isProcessing,
   inputValue,
   setInputValue,
+  skillSuggestions: skillSuggestionsProp,
+  onSlashCommandQuery,
   mentionSuggestions: mentionSuggestionsProp,
   onMentionQuery,
   className,
@@ -112,14 +126,24 @@ export const InputBox: React.FC<InputBoxProps> = ({
   const [selectedCommandIndex, setSelectedCommandIndex] = useState(0);
   const [selectedMentionIndex, setSelectedMentionIndex] = useState(0);
   const lastCommandQueryRef = useRef("");
+  const lastSlashQueryRef = useRef<string | null>(null);
   const lastMentionQueryRef = useRef<string | null>(null);
   const [cursorPosition, setCursorPosition] = useState(0);
   const commandInput = useMemo(() => inputValue.trimStart(), [inputValue]);
   const shouldShowCommands =
     commandInput.startsWith("/") && !/\s/.test(commandInput.slice(1));
+  const slashCommandMatch = useMemo(
+    () => commandInput.match(/^\/([a-z0-9][a-z0-9_-]*)/i),
+    [commandInput]
+  );
+  const slashCommandName = slashCommandMatch?.[1]?.toLowerCase() ?? "";
   const commandQuery = useMemo(
     () => (shouldShowCommands ? commandInput.slice(1).toLowerCase() : ""),
     [commandInput, shouldShowCommands]
+  );
+  const skillSuggestions = useMemo(
+    () => skillSuggestionsProp ?? [],
+    [skillSuggestionsProp]
   );
   const filteredCommands = useMemo(() => {
     if (!shouldShowCommands) {
@@ -128,15 +152,65 @@ export const InputBox: React.FC<InputBoxProps> = ({
     if (!commandQuery) {
       return SLASH_COMMANDS;
     }
-    return SLASH_COMMANDS.filter((command) =>
+    const builtInCommands = SLASH_COMMANDS.filter((command) =>
       command.label.slice(1).toLowerCase().startsWith(commandQuery)
     );
-  }, [commandQuery, shouldShowCommands]);
+    const hasExactBuiltIn = builtInCommands.some(
+      (command) => command.label.slice(1).toLowerCase() === commandQuery
+    );
+
+    if (hasExactBuiltIn) {
+      return builtInCommands;
+    }
+
+    const dynamicSkills = skillSuggestions.filter((skill) =>
+      skill.label.slice(1).toLowerCase().startsWith(commandQuery)
+    );
+    const hasExactSkill = dynamicSkills.some(
+      (skill) => skill.label.slice(1).toLowerCase() === commandQuery
+    );
+
+    if (hasExactSkill || dynamicSkills.length > 0) {
+      return [...builtInCommands, ...dynamicSkills];
+    }
+
+    return [
+      ...builtInCommands,
+      {
+        id: `skill-${commandQuery}`,
+        label: `/${commandQuery}`,
+        description: "Use as a skill slash command",
+        insertText: `/${commandQuery} `,
+        hint: `发送后会优先到 skill 目录查找 ${commandQuery} 并读取对应 SKILL.md`,
+      },
+    ];
+  }, [commandQuery, shouldShowCommands, skillSuggestions]);
   const hasCommandSuggestions = filteredCommands.length > 0;
   const activeCommandIndex = hasCommandSuggestions
     ? Math.min(selectedCommandIndex, filteredCommands.length - 1)
     : 0;
-  const mentionSuggestions = mentionSuggestionsProp ?? [];
+  const slashSkillHint = useMemo(() => {
+    if (!commandInput.startsWith("/")) {
+      return null;
+    }
+    if (!slashCommandName) {
+      return "输入 /skill-name 作为 skill 命令，例如 /review";
+    }
+    if (slashCommandName === "init") {
+      return "内置 /init 工作流，会生成或更新 AGENTS.md";
+    }
+    const matchedSkill = skillSuggestions.find(
+      (skill) => skill.label.slice(1).toLowerCase() === slashCommandName
+    );
+    if (matchedSkill) {
+      return `已匹配到项目 skill：${matchedSkill.label}，发送后会优先读取对应 SKILL.md`;
+    }
+    return `将按 skill 命令处理：发送后会优先查找 ${slashCommandName} 对应的 SKILL.md`;
+  }, [commandInput, skillSuggestions, slashCommandName]);
+  const mentionSuggestions = useMemo(
+    () => mentionSuggestionsProp ?? [],
+    [mentionSuggestionsProp]
+  );
 
   const mentionState = useMemo(
     () => getMentionState(inputValue, cursorPosition),
@@ -145,8 +219,10 @@ export const InputBox: React.FC<InputBoxProps> = ({
   const mentionQuery = mentionState?.query ?? null;
   const hasMentionQuery = Boolean(mentionQuery && mentionQuery.length > 0);
   const shouldShowMentionHint = Boolean(mentionState && !hasMentionQuery);
-  const activeMentionSuggestions =
-    mentionState && hasMentionQuery ? mentionSuggestions : [];
+  const activeMentionSuggestions = useMemo(
+    () => (mentionState && hasMentionQuery ? mentionSuggestions : []),
+    [hasMentionQuery, mentionState, mentionSuggestions]
+  );
   const hasMentionSuggestions = activeMentionSuggestions.length > 0;
   const activeMentionIndex = hasMentionSuggestions
     ? Math.min(selectedMentionIndex, activeMentionSuggestions.length - 1)
@@ -202,6 +278,18 @@ export const InputBox: React.FC<InputBoxProps> = ({
   }, []);
 
   useEffect(() => {
+    if (!onSlashCommandQuery) {
+      return;
+    }
+    const nextQuery = shouldShowCommands ? commandQuery : null;
+    if (nextQuery === lastSlashQueryRef.current) {
+      return;
+    }
+    lastSlashQueryRef.current = nextQuery;
+    onSlashCommandQuery(nextQuery);
+  }, [commandQuery, onSlashCommandQuery, shouldShowCommands]);
+
+  useEffect(() => {
     if (!onMentionQuery) {
       return;
     }
@@ -209,7 +297,6 @@ export const InputBox: React.FC<InputBoxProps> = ({
     if (nextQuery === lastMentionQueryRef.current) {
       return;
     }
-    setSelectedMentionIndex(0);
     lastMentionQueryRef.current = nextQuery;
     onMentionQuery(nextQuery);
   }, [hasMentionQuery, mentionQuery, onMentionQuery]);
@@ -440,6 +527,9 @@ export const InputBox: React.FC<InputBoxProps> = ({
           ) : hasCommandSuggestions ? (
             <div className="absolute left-0 right-0 bottom-full mb-2 z-10">
               <div className="flex flex-col gap-1 rounded-lg bg-[var(--vscode-editorWidget-background)] px-2 py-1.5 shadow-[0_12px_28px_rgba(0,0,0,0.28)]">
+                <div className="px-2 py-1 text-[11px] text-[var(--vscode-descriptionForeground)]">
+                  内置命令和项目 skills
+                </div>
                 <div className="flex flex-col gap-1 max-h-40 overflow-auto">
                   {filteredCommands.map((command, index) => {
                     const isSelected = index === activeCommandIndex;
@@ -454,12 +544,19 @@ export const InputBox: React.FC<InputBoxProps> = ({
                         }`}
                         onClick={() => applyCommand(command)}
                       >
-                        <span className="font-semibold text-[var(--vscode-foreground)]">
-                          {command.label}
-                        </span>
-                        <span className="truncate text-[var(--vscode-descriptionForeground)]">
-                          {command.description}
-                        </span>
+                        <div className="flex min-w-0 flex-col">
+                          <span className="font-semibold text-[var(--vscode-foreground)]">
+                            {command.label}
+                          </span>
+                          <span className="truncate text-[var(--vscode-descriptionForeground)]">
+                            {command.description}
+                          </span>
+                          {command.hint ? (
+                            <span className="truncate text-[10px] text-[var(--vscode-descriptionForeground)] opacity-80">
+                              {command.hint}
+                            </span>
+                          ) : null}
+                        </div>
                       </button>
                     );
                   })}
@@ -471,7 +568,7 @@ export const InputBox: React.FC<InputBoxProps> = ({
           <TextareaAutosize
             ref={textareaRef}
             className="w-full min-h-[40px] px-2.5 py-2 rounded bg-[var(--vscode-input-background)] text-[var(--vscode-input-foreground)] leading-normal resize-none overflow-y-auto outline-none transition-all placeholder:text-[var(--vscode-input-placeholderForeground)] focus:shadow-[0_0_0_1px_var(--vscode-focusBorder)] disabled:opacity-60 disabled:cursor-not-allowed"
-            placeholder="Type your message... (Ctrl+Enter to send)"
+            placeholder="Type your message... Use /skill-name for skills. (Ctrl+Enter to send)"
             value={inputValue}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}
@@ -481,6 +578,11 @@ export const InputBox: React.FC<InputBoxProps> = ({
             maxRows={15}
             autoFocus={true}
           />
+          {slashSkillHint ? (
+            <div className="mt-1 px-1 text-[11px] text-[var(--vscode-descriptionForeground)]">
+              {slashSkillHint}
+            </div>
+          ) : null}
         </div>
 
         <div className="flex flex-nowrap gap-1.5 justify-end items-center">

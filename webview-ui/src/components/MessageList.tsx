@@ -70,7 +70,7 @@ export const MessageList: React.FC<MessageListProps> = ({
             No messages yet
           </h3>
           <p className="m-0 text-sm">
-            Start a conversation by typing a message below
+            Start a conversation below, or try a skill command like `/review`
           </p>
         </div>
       </div>

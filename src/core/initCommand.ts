@@ -105,12 +105,13 @@ export const buildSlashSkillPrompt = (
     "Treat the slash command name as a strong hint that a matching workspace skill should be used.",
     "",
     "Requirements:",
-    `1) Before doing substantive work, call list_skills with query "${skillName}".`,
-    `2) Then call load_skill with the best matching skill for "${skillName}".`,
-    "3) Follow the loaded skill instructions closely for the current task.",
-    "4) If no matching skill exists, explain that clearly and continue with the user's request using normal tools.",
-    "5) Keep the slash command intent in mind throughout the task.",
-    "6) When the task is complete, call attempt_completion.",
+    "1) Use normal file tools to inspect possible skill folders such as `.agent/skills`, `.code-sidecar/skills`, and `skills`.",
+    `2) Look for a matching skill directory or a \`SKILL.md\` file related to "${skillName}".`,
+    "3) Read the matching `SKILL.md` with normal file tools and follow its instructions for the current task.",
+    "4) Read additional resource files in that skill folder only when needed.",
+    "5) If no matching skill exists, explain that clearly and continue with the user's request using normal tools.",
+    "6) Keep the slash command intent in mind throughout the task.",
+    "7) When the task is complete, call attempt_completion.",
   ];
 
   if (guidance) {

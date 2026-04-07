@@ -20,8 +20,6 @@ import {
   ListCodeDefinitionNamesTool,
   GitOperationsTool,
   UpdateTodoListTool,
-  ListSkillsTool,
-  LoadSkillTool,
 } from "../tools";
 import { ModeManager } from "../managers/ModeManager";
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
@@ -30,7 +28,6 @@ import { PromptBuilder } from "../managers/PromptBuilder";
 import { PermissionManager } from "../managers/PermissionManager";
 import { ContextCollector } from "../managers/ContextCollector";
 import { WorkspaceSearchManager } from "../managers/WorkspaceSearchManager";
-import { SkillManager } from "../managers/SkillManager";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { AppError, ErrorHandler } from "../managers";
@@ -59,7 +56,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private permissionManager: PermissionManager;
   private contextCollector: ContextCollector;
   private workspaceSearchManager: WorkspaceSearchManager;
-  private skillManager: SkillManager;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
   private conversationController: ConversationController;
@@ -96,7 +92,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     // Initialize context collector
     this.contextCollector = new ContextCollector();
     this.workspaceSearchManager = new WorkspaceSearchManager();
-    this.skillManager = new SkillManager();
 
     // Initialize conversation history manager
     this.conversationHistoryManager = new ConversationHistoryManager(context);
@@ -174,8 +169,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.toolExecutor.registerTool(new GetDiagnosticsTool());
     this.toolExecutor.registerTool(new ListCodeDefinitionNamesTool());
     this.toolExecutor.registerTool(new GitOperationsTool());
-    this.toolExecutor.registerTool(new ListSkillsTool(this.skillManager));
-    this.toolExecutor.registerTool(new LoadSkillTool(this.skillManager));
     this.toolExecutor.registerTool(
       new UpdateTodoListTool((todoList) => this.updateTodoList(todoList))
     );
@@ -295,6 +288,9 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.messageHandlerRegistry.register("workspace_search", (message) =>
       this.handleWorkspaceSearch(message)
     );
+    this.messageHandlerRegistry.register("skill_search", (message) =>
+      this.handleSkillSearch(message)
+    );
   }
 
   private async handleMessage(message: UserMessage): Promise<void> {
@@ -371,6 +367,29 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
       logger.debug("[AgentWebviewProvider] Workspace search failed:", error);
       this.postMessageToWebview({
         type: "workspace_search_result",
+        requestId: message.requestId,
+        matches: [],
+      });
+    }
+  }
+
+  private async handleSkillSearch(
+    message: Extract<UserMessage, { type: "skill_search" }>
+  ): Promise<void> {
+    try {
+      const matches = await this.workspaceSearchManager.searchSkills(
+        message.query,
+        message.limit
+      );
+      this.postMessageToWebview({
+        type: "skill_search_result",
+        requestId: message.requestId,
+        matches,
+      });
+    } catch (error) {
+      logger.debug("[AgentWebviewProvider] Skill search failed:", error);
+      this.postMessageToWebview({
+        type: "skill_search_result",
         requestId: message.requestId,
         matches: [],
       });
@@ -662,4 +681,3 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     });
   }
 }
-
