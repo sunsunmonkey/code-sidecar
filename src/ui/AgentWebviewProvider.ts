@@ -1,6 +1,10 @@
 import * as vscode from "vscode";
 import { Task } from "../core/task";
-import { buildInitPrompt, parseInitCommand } from "../core/initCommand";
+import {
+  buildInitPrompt,
+  buildSlashSkillPrompt,
+  parseSlashCommand,
+} from "../core/initCommand";
 
 import {
   ToolExecutor,
@@ -16,6 +20,8 @@ import {
   ListCodeDefinitionNamesTool,
   GitOperationsTool,
   UpdateTodoListTool,
+  ListSkillsTool,
+  LoadSkillTool,
 } from "../tools";
 import { ModeManager } from "../managers/ModeManager";
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
@@ -24,6 +30,7 @@ import { PromptBuilder } from "../managers/PromptBuilder";
 import { PermissionManager } from "../managers/PermissionManager";
 import { ContextCollector } from "../managers/ContextCollector";
 import { WorkspaceSearchManager } from "../managers/WorkspaceSearchManager";
+import { SkillManager } from "../managers/SkillManager";
 import { ConfigurationManager } from "../config/ConfigurationManager";
 import { ConversationHistoryManager } from "../managers/ConversationHistoryManager";
 import { AppError, ErrorHandler } from "../managers";
@@ -52,6 +59,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private permissionManager: PermissionManager;
   private contextCollector: ContextCollector;
   private workspaceSearchManager: WorkspaceSearchManager;
+  private skillManager: SkillManager;
   private conversationHistoryManager: ConversationHistoryManager;
   private errorHandler: ErrorHandler;
   private conversationController: ConversationController;
@@ -88,6 +96,7 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     // Initialize context collector
     this.contextCollector = new ContextCollector();
     this.workspaceSearchManager = new WorkspaceSearchManager();
+    this.skillManager = new SkillManager();
 
     // Initialize conversation history manager
     this.conversationHistoryManager = new ConversationHistoryManager(context);
@@ -165,6 +174,8 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     this.toolExecutor.registerTool(new GetDiagnosticsTool());
     this.toolExecutor.registerTool(new ListCodeDefinitionNamesTool());
     this.toolExecutor.registerTool(new GitOperationsTool());
+    this.toolExecutor.registerTool(new ListSkillsTool(this.skillManager));
+    this.toolExecutor.registerTool(new LoadSkillTool(this.skillManager));
     this.toolExecutor.registerTool(
       new UpdateTodoListTool((todoList) => this.updateTodoList(todoList))
     );
@@ -314,11 +325,18 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
 
     this.cancelCurrentTask();
 
-    const initCommand = parseInitCommand(message.content);
-    const taskMessage = initCommand
-      ? buildInitPrompt(initCommand.guidance)
+    const slashCommand = parseSlashCommand(message.content);
+    const taskMessage = slashCommand
+      ? slashCommand.kind === "init"
+        ? buildInitPrompt(slashCommand.command.guidance)
+        : buildSlashSkillPrompt(
+            slashCommand.command.skillName,
+            slashCommand.command.guidance
+          )
       : message.content;
-    const displayMessage = initCommand ? initCommand.raw : message.content;
+    const displayMessage = slashCommand
+      ? slashCommand.command.raw
+      : message.content;
 
     this.currentTask = new Task(
       this,

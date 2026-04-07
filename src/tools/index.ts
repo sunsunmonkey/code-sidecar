@@ -16,3 +16,5 @@ export { GetDiagnosticsTool } from './GetDiagnosticsTool';
 export { ListCodeDefinitionNamesTool } from './ListCodeDefinitionNamesTool';
 export { GitOperationsTool } from './GitOperationsTool';
 export { UpdateTodoListTool } from './UpdateTodoListTool';
+export { ListSkillsTool } from "./ListSkillsTool";
+export { LoadSkillTool } from "./LoadSkillTool";

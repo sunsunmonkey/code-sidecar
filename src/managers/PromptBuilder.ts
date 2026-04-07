@@ -2,7 +2,6 @@ import * as vscode from "vscode";
 import { ModeManager } from "./ModeManager";
 import { ToolExecutor } from "../tools";
 import * as os from "os";
-import * as path from "path";
 
 /**
  * PromptBuilder dynamically constructs system prompts
@@ -155,6 +154,7 @@ You can:
 - Execute commands in the terminal
 - Access diagnostic information (errors, warnings)
 - Navigate the project structure
+- Discover workspace skills and load their instructions dynamically
 - Provide explanations and suggestions
 
 Your responses should be:
@@ -190,6 +190,7 @@ Your responses should be:
 - Ask for clarification when requirements are unclear
 - Respect user permissions and confirmations
 - Provide reasoning for your actions
+- When a task may benefit from a workspace skill, call \`list_skills\` first and then \`load_skill\` before proceeding
 
 ## Mode-Specific Rules:
 ${editRestriction}
