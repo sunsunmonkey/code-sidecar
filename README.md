@@ -75,8 +75,3 @@ This extension contributes these settings:
 
 - This project is mainly my graduation design and is intended for learning.
 - The overall design and content are intentionally simple.
-- It is still a WIP and not fully polished.
-
-## Build Notes
-
-- Development and build work used kiro and codex as the main coding assistants.
