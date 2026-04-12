@@ -200,16 +200,11 @@ export const ChatPage = ({ isActive, onOpenConfig }: ChatPageProps) => {
 
       if (lastStreamingIndex >= 0) {
         const lastMessage = prev[lastStreamingIndex];
-        let nextContent = lastMessage.content;
-        if (content) {
-          if (
-            content.startsWith(lastMessage.content) ||
-            lastMessage.content.startsWith(content)
-          ) {
-            nextContent = content;
-          } else {
-            nextContent = lastMessage.content + content;
-          }
+        const nextContent = content.length >= lastMessage.content.length
+          ? content
+          : lastMessage.content;
+        if (nextContent === lastMessage.content && isStreaming === lastMessage.isStreaming) {
+          return prev;
         }
         const updatedMessage = {
           ...lastMessage,

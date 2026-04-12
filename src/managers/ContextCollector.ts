@@ -186,37 +186,51 @@ export class ContextCollector {
     return context;
   }
 
-  /**
-   * Format project context for prompt input
-   */
   formatContext(context: ProjectContext): string {
     const blocks: string[] = [];
 
-    if (context.activeFile) {
+    if (context.selection && context.activeFile) {
       const language = context.activeFile.language
         ? ` (${context.activeFile.language})`
         : "";
       blocks.push(
-        `## Active File: ${context.activeFile.path}${language}\n${context.activeFile.content}`
+        `## Active File: ${context.activeFile.path}${language}\n## Selection (lines ${context.selection.startLine}-${context.selection.endLine})\n\`\`\`${context.activeFile.language || ""}\n${context.selection.text}\n\`\`\``
       );
-    }
-
-    if (context.selection) {
-      blocks.push(
-        `## Selection (${context.selection.startLine}-${context.selection.endLine})\n${context.selection.text}`
-      );
-    }
-
-    if (context.cursorPosition) {
-      blocks.push(
-        `## Cursor Position\nLine: ${context.cursorPosition.line}, Character: ${context.cursorPosition.character}`
-      );
+      if (context.cursorPosition) {
+        blocks.push(
+          `Cursor at line ${context.cursorPosition.line}, column ${context.cursorPosition.character}`
+        );
+      }
+    } else if (context.activeFile) {
+      const language = context.activeFile.language
+        ? ` (${context.activeFile.language})`
+        : "";
+      const lines = context.activeFile.content.split("\n");
+      const maxLines = 300;
+      if (lines.length > maxLines) {
+        const truncated = lines.slice(0, maxLines).join("\n");
+        blocks.push(
+          `## Active File: ${context.activeFile.path}${language} (showing first ${maxLines} of ${lines.length} lines)\n${truncated}\n...(truncated)`
+        );
+      } else {
+        blocks.push(
+          `## Active File: ${context.activeFile.path}${language}\n${context.activeFile.content}`
+        );
+      }
     }
 
     if (context.diagnostics && context.diagnostics.length > 0) {
-      const diagLines = this.formatDiagnostics(context.diagnostics);
+      const errorDiags = context.diagnostics.filter(
+        (d) => d.severity === "error" || d.severity === "warning"
+      );
+      const relevantDiags = errorDiags.length > 0 ? errorDiags : context.diagnostics;
+      const limitedDiags = relevantDiags.slice(0, 30);
+      const diagLines = this.formatDiagnostics(limitedDiags);
+      const suffix = relevantDiags.length > 30
+        ? `\n... and ${relevantDiags.length - 30} more`
+        : "";
       blocks.push(
-        `## Diagnostics (${context.diagnostics.length})\n${diagLines.join("\n")}`
+        `## Diagnostics (${relevantDiags.length} errors/warnings)\n${diagLines.join("\n")}${suffix}`
       );
     }
 

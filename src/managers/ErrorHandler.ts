@@ -1,4 +1,4 @@
-﻿import { logger } from "code-sidecar-shared/utils/logger";
+import { logger } from "code-sidecar-shared/utils/logger";
 import { ErrorType } from "code-sidecar-shared/types/errors";
 import type { ErrorPayload } from "code-sidecar-shared/types/errors";
 import { AppError, ErrorContext, ErrorLogEntry, ErrorResponse } from "./errorTypes";
@@ -127,7 +127,11 @@ export class ErrorHandler {
       message.includes("file not found") ||
       message.includes("enoent") ||
       message.includes("permission denied") ||
-      message.includes("eacces")
+      message.includes("eacces") ||
+      message.includes("search text not found") ||
+      message.includes("invalid search parameter") ||
+      message.includes("invalid replace parameter") ||
+      message.includes("appears multiple times")
     ) {
       return ErrorType.TOOL_ERROR;
     }

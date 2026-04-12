@@ -80,7 +80,7 @@ export const buildInitPrompt = (guidance: string): string => {
     "Create or update AGENTS.md at the repository root with concise, repo-specific guidance for future coding tasks.",
     "",
     "Requirements:",
-    "1) Inspect the repo layout with list_files.",
+    "1) Inspect the repo layout with execute_command (e.g., find or ls).",
     "2) Read only key top-level docs/configs as needed (README*, CONTRIBUTING*, package.json, tsconfig.json, eslint config, etc.).",
     "3) If AGENTS.md exists, preserve useful rules and merge new guidance; do not delete useful details.",
     "4) Write AGENTS.md with clear sections (Project Structure, Build/Test Commands, Coding Style, Testing, Commit/PR, Security/Configuration).",

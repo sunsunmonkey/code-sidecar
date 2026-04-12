@@ -31,18 +31,25 @@ export class AssistantMessageParser {
   private accumulator = "";
   private readonly toolOpeningTags: string[];
   private readonly paramOpeningTags: string[];
+  private readonly paramClosingTags: string[];
+  private readonly toolClosingTags: string[];
   private readonly validToolNames: string[];
+  private pendingParamClose: {
+    paramName: string;
+    paramValue: string;
+    afterCloseIndex: number;
+  } | undefined = undefined;
+  private readonly PENDING_CLOSE_LOOKAHEAD = 20;
 
   constructor(toolNames: string[], paramNames: string[]) {
     this.validToolNames = toolNames;
     this.toolOpeningTags = toolNames.map((name) => `<${name}>`);
     this.paramOpeningTags = paramNames.map((name) => `<${name}>`);
+    this.paramClosingTags = paramNames.map((name) => `</${name}>`);
+    this.toolClosingTags = toolNames.map((name) => `</${name}>`);
     this.reset();
   }
 
-  /**
-   * Reset the parser state.
-   */
   public reset(): void {
     this.contentBlocks = [];
     this.currentTextContent = undefined;
@@ -51,6 +58,7 @@ export class AssistantMessageParser {
     this.currentToolUseStartIndex = 0;
     this.currentParamName = undefined;
     this.currentParamValueStartIndex = 0;
+    this.pendingParamClose = undefined;
     this.accumulator = "";
   }
 
@@ -65,6 +73,48 @@ export class AssistantMessageParser {
    * Process a new chunk of text and update the parser state.
    * @param chunk The new chunk of text to process.
    */
+  private isFollowedByStructuralTag(textAfterClose: string): boolean | undefined {
+    const trimmed = textAfterClose.trimStart();
+    if (trimmed.length === 0) {
+      return undefined;
+    }
+    if (trimmed[0] !== "<") {
+      return false;
+    }
+    for (const tag of this.paramOpeningTags) {
+      if (trimmed.startsWith(tag)) {
+        return true;
+      }
+      if (tag.startsWith(trimmed)) {
+        return undefined;
+      }
+    }
+    for (const tag of this.toolClosingTags) {
+      if (trimmed.startsWith(tag)) {
+        return true;
+      }
+      if (tag.startsWith(trimmed)) {
+        return undefined;
+      }
+    }
+    return false;
+  }
+
+  private commitParamClose(pending: NonNullable<typeof this.pendingParamClose>): void {
+    if (this.currentToolUse) {
+      this.currentToolUse.params[pending.paramName] =
+        pending.paramName === "content"
+          ? pending.paramValue.replace(/^\n/, "").replace(/\n$/, "")
+          : pending.paramValue.trim();
+    }
+    this.currentParamName = undefined;
+    this.currentParamValueStartIndex = pending.afterCloseIndex;
+  }
+
+  private cancelParamClose(): void {
+    this.pendingParamClose = undefined;
+  }
+
   public processChunk(chunk: string): AssistantMessageContent[] {
     if (this.accumulator.length + chunk.length > this.maxAccumulatorSize) {
       throw new Error("Assistant message exceeds maximum allowed size");
@@ -76,6 +126,31 @@ export class AssistantMessageParser {
       const char = chunk[i];
       this.accumulator += char;
       const currentPosition = accumulatorStartLength + i;
+
+      if (this.pendingParamClose && this.currentToolUse) {
+        const textAfterClose = this.accumulator.slice(this.pendingParamClose.afterCloseIndex);
+        const verdict = this.isFollowedByStructuralTag(textAfterClose);
+        if (verdict === true) {
+          this.commitParamClose(this.pendingParamClose);
+          this.pendingParamClose = undefined;
+        } else if (verdict === false) {
+          this.cancelParamClose();
+          if (this.currentParamName) {
+            const currentParamValue = this.accumulator.slice(this.currentParamValueStartIndex);
+            this.currentToolUse.params[this.currentParamName] = currentParamValue;
+          }
+          continue;
+        } else if (textAfterClose.length > this.PENDING_CLOSE_LOOKAHEAD) {
+          this.cancelParamClose();
+          if (this.currentParamName) {
+            const currentParamValue = this.accumulator.slice(this.currentParamValueStartIndex);
+            this.currentToolUse.params[this.currentParamName] = currentParamValue;
+          }
+          continue;
+        } else {
+          continue;
+        }
+      }
 
       if (this.currentToolUse && this.currentParamName) {
         const currentParamValue = this.accumulator.slice(
@@ -94,11 +169,11 @@ export class AssistantMessageParser {
             0,
             -paramClosingTag.length
           );
-          this.currentToolUse.params[this.currentParamName] =
-            this.currentParamName === "content"
-              ? paramValue.replace(/^\n/, "").replace(/\n$/, "")
-              : paramValue.trim();
-          this.currentParamName = undefined;
+          this.pendingParamClose = {
+            paramName: this.currentParamName,
+            paramValue,
+            afterCloseIndex: this.accumulator.length,
+          };
           continue;
         }
 
@@ -222,6 +297,10 @@ export class AssistantMessageParser {
    * Should be called after processing the last chunk.
    */
   public finalizeContentBlocks(): void {
+    if (this.pendingParamClose) {
+      this.commitParamClose(this.pendingParamClose);
+      this.pendingParamClose = undefined;
+    }
     for (const block of this.contentBlocks) {
       if (block.partial) {
         block.partial = false;

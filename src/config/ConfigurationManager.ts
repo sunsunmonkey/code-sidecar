@@ -56,8 +56,8 @@ export class ConfigurationManager {
         baseUrl: config.get<string>("api.baseUrl", ""),
         model: config.get<string>("api.model", ""),
         apiKey: apiKey || "",
-        temperature: config.get<number>("api.temperature", 0.7),
-        maxTokens: config.get<number>("api.maxTokens", 4096),
+        temperature: config.get<number>("api.temperature", 0),
+        maxTokens: config.get<number>("api.maxTokens", 16384),
       },
       permissions: {
         allowReadByDefault: config.get<boolean>(
@@ -78,8 +78,8 @@ export class ConfigurationManager {
         ),
       },
       advanced: {
-        maxLoopCount: config.get<number>("maxLoopCount", 25),
-        contextWindowSize: config.get<number>("contextWindowSize", 100000),
+        maxLoopCount: config.get<number>("maxLoopCount", 50),
+        contextWindowSize: config.get<number>("contextWindowSize", 128000),
       },
     };
 

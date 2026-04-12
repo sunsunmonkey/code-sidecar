@@ -1,4 +1,4 @@
-﻿import React from "react";
+﻿﻿﻿﻿﻿import React from "react";
 import ReactMarkdown from "react-markdown";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
 import {
@@ -37,7 +37,7 @@ const TOOL_TAG_NAMES = [
   "read_file",
   "write_file",
   "list_files",
-  "apply_diff",
+  "edit",
   "insert_content",
   "search_files",
   "execute_command",

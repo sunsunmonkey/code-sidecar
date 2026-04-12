@@ -1,51 +1,29 @@
 import React, { useState } from "react";
 import {
-  Activity,
   BookOpen,
   Check,
   ChevronDown,
   ChevronRight,
-  Code2,
   FileText,
-  Folder,
-  GitBranch,
-  ListChecks,
   PenLine,
-  PlusSquare,
-  Search,
   Terminal,
   Wrench,
   X,
 } from "lucide-react";
 import type { ToolUse, ToolResult } from "code-sidecar-shared/types/tools";
 
-/**
- * ToolCallDisplay component shows a tool call with its parameters
- * Requirements: 14.1, 14.2, 14.4, 14.5
- */
 interface ToolCallDisplayProps {
   toolCall: ToolUse;
   result?: ToolResult;
 }
 
-/**
- * Get icon for specific tool types
- */
 const getToolIcon = (toolName: string): React.ReactNode => {
   const iconMap: Record<string, React.ReactNode> = {
     read_file: <BookOpen size={14} strokeWidth={1.9} />,
     write_file: <PenLine size={14} strokeWidth={1.9} />,
-    list_directory: <Folder size={14} strokeWidth={1.9} />,
-    list_files: <Folder size={14} strokeWidth={1.9} />,
-    search_files: <Search size={14} strokeWidth={1.9} />,
+    edit: <FileText size={14} strokeWidth={1.9} />,
     execute_command: <Terminal size={14} strokeWidth={1.9} />,
-    get_diagnostics: <Activity size={14} strokeWidth={1.9} />,
-    apply_diff: <FileText size={14} strokeWidth={1.9} />,
-    insert_content: <PlusSquare size={14} strokeWidth={1.9} />,
-    list_code_definition_names: <Code2 size={14} strokeWidth={1.9} />,
     attempt_completion: <Check size={14} strokeWidth={2.2} />,
-    git_operations: <GitBranch size={14} strokeWidth={1.9} />,
-    update_todo_list: <ListChecks size={14} strokeWidth={1.9} />,
   };
 
   return iconMap[toolName] || <Wrench size={14} strokeWidth={1.9} />;

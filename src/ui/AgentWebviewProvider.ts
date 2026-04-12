@@ -11,15 +11,8 @@ import {
   AttemptCompletionTool,
   ReadFileTool,
   WriteFileTool,
-  ListFilesTool,
-  ApplyDiffTool,
-  InsertContentTool,
-  SearchFilesTool,
+  EditTool,
   ExecuteCommandTool,
-  GetDiagnosticsTool,
-  ListCodeDefinitionNamesTool,
-  GitOperationsTool,
-  UpdateTodoListTool,
 } from "../tools";
 import { ModeManager } from "../managers/ModeManager";
 import type { ApiConfiguration } from "code-sidecar-shared/types/api";
@@ -41,7 +34,7 @@ import type {
   WebviewMessage,
 } from "code-sidecar-shared/types/messages";
 import { ErrorType } from "code-sidecar-shared/types/errors";
-import type { TodoList } from "code-sidecar-shared/types/todo";
+
 
 /**
  * Agent Webview Provider manages the sidebar panel and task execution
@@ -60,7 +53,6 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
   private errorHandler: ErrorHandler;
   private conversationController: ConversationController;
   private messageHandlerRegistry: MessageHandlerRegistry;
-  private todoList: TodoList = { items: [] };
   private apiConfiguration: ApiConfiguration = {
     model: "",
     apiKey: "",
@@ -146,40 +138,16 @@ export class AgentWebviewProvider implements vscode.WebviewViewProvider {
     }
   }
 
-  /**
-   * Register default tools
-   * Requirements: 13.1, 13.2, 13.3, 13.4, 13.5, 13.6, 6.6
-   */
   private registerDefaultTools(): void {
-    // Register attempt_completion tool (Requirement 6.6)
-    this.toolExecutor.registerTool(new AttemptCompletionTool());
-
-    // Register file operation tools (Requirements 13.1, 13.2, 13.4)
     this.toolExecutor.registerTool(new ReadFileTool());
     this.toolExecutor.registerTool(new WriteFileTool());
-    this.toolExecutor.registerTool(new ListFilesTool());
-
-    // Register advanced file editing tools (Requirements 13.3, 13.5)
-    this.toolExecutor.registerTool(new ApplyDiffTool());
-    this.toolExecutor.registerTool(new InsertContentTool());
-    this.toolExecutor.registerTool(new SearchFilesTool());
-
-    // Register command execution and diagnostics tools (Requirements 13.5, 13.6)
+    this.toolExecutor.registerTool(new EditTool());
     this.toolExecutor.registerTool(new ExecuteCommandTool());
-    this.toolExecutor.registerTool(new GetDiagnosticsTool());
-    this.toolExecutor.registerTool(new ListCodeDefinitionNamesTool());
-    this.toolExecutor.registerTool(new GitOperationsTool());
-    this.toolExecutor.registerTool(
-      new UpdateTodoListTool((todoList) => this.updateTodoList(todoList))
-    );
-
+    this.toolExecutor.registerTool(new AttemptCompletionTool());
     logger.debug(`Registered ${this.toolExecutor.getToolCount()} tools`);
   }
 
-  private updateTodoList(todoList: TodoList): void {
-    this.todoList = todoList;
-    this.postMessageToWebview({ type: "todo_list_updated", todoList });
-  }
+
 
   resolveWebviewView(
     webviewView: vscode.WebviewView,

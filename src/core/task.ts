@@ -1,4 +1,4 @@
-﻿import {
+import {
   ApiHandler,
   OpenAIHistoryItem,
   TokenUsage,
@@ -156,9 +156,6 @@ export class Task {
     return parts.join("\n");
   }
 
-  /**
-   * Recursively execute the ReAct loop
-   */
   private async recursivelyMakeRequest(history: HistoryItem[]) {
     try {
       if (this.isCancelled) {
@@ -168,7 +165,6 @@ export class Task {
         return;
       }
 
-      // Check loop count limit
       if (!this.shouldContinueLoop()) {
         this.provider.postMessageToWebview({
           type: "error",
@@ -188,6 +184,8 @@ export class Task {
 
       const apiHandler = new ApiHandler(this.apiConfiguration);
       const systemPrompt = await this.getSystemPrompt();
+
+      history = this.truncateHistory(history);
 
       history = history.map((item) => {
         if (item.role === "tool_result") {
@@ -340,11 +338,56 @@ export class Task {
     }
   }
 
-  /**
-   * Check if the loop should continue
-   */
   private shouldContinueLoop(): boolean {
     return this.loopCount < this.maxLoopCount;
+  }
+
+  private truncateHistory(history: HistoryItem[]): HistoryItem[] {
+    if (history.length <= 1 || this.contextWindowTokens <= 0) {
+      return history;
+    }
+
+    const estimateTokens = (item: HistoryItem): number => {
+      const text = typeof item.content === "string"
+        ? item.content
+        : JSON.stringify(item.content);
+      return Math.ceil(text.length / 4);
+    };
+
+    const totalTokens = history.reduce((sum, item) => sum + estimateTokens(item), 0);
+    const budget = Math.floor(this.contextWindowTokens * 0.7);
+
+    if (totalTokens <= budget) {
+      return history;
+    }
+
+    const first = history[0];
+    const rest = history.slice(1);
+    let currentTokens = estimateTokens(first);
+    const kept: HistoryItem[] = [];
+
+    for (let i = rest.length - 1; i >= 0; i--) {
+      const itemTokens = estimateTokens(rest[i]);
+      if (currentTokens + itemTokens > budget) {
+        break;
+      }
+      currentTokens += itemTokens;
+      kept.unshift(rest[i]);
+    }
+
+    if (kept.length < rest.length) {
+      const droppedCount = rest.length - kept.length;
+      logger.debug(
+        `[Task ${this.id}] Truncated ${droppedCount} history items to fit context window`
+      );
+      const summary: HistoryItem = {
+        role: "user",
+        content: `[SYSTEM] ${droppedCount} earlier messages were truncated to fit the context window. The original user request is preserved above.`,
+      };
+      return [first, summary, ...kept];
+    }
+
+    return history;
   }
 
   /**
@@ -450,33 +493,20 @@ export class Task {
     return this.abortController;
   }
 
-  /**
-   * Generate error message when LLM doesn't use tools
-   * This prompts the LLM to use the proper tool format
-   */
   private noToolsUsed(): string {
-    return `[ERROR] You did not use a tool in your previous response! Please retry with a tool use.
+    return `[SYSTEM] Your previous response did not include a tool call. Every response must contain exactly one tool call using XML tags.
 
-# Reminder: Instructions for Tool Use
-
-Tool uses are formatted using XML-style tags. The tool name itself becomes the XML tag name. Each parameter is enclosed within its own set of tags. Here's the structure:
-
-<actual_tool_name>
-<parameter1_name>value1</parameter1_name>
-<parameter2_name>value2</parameter2_name>
-...
-</actual_tool_name>
-
-For example, to use the attempt_completion tool:
-
+If you have completed the task, use:
 <attempt_completion>
-<result>
-I have completed the task...
-</result>
+<result>Summary of what was done</result>
 </attempt_completion>
 
-Always use the actual tool name as the XML tag name for proper parsing and execution.
-`;
+If you need to continue working, use the appropriate tool (e.g., read_file, edit, execute_command).
+
+Format reminder:
+<tool_name>
+<param>value</param>
+</tool_name>`;
   }
 }
 

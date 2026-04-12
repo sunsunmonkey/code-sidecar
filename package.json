@@ -62,16 +62,16 @@
         },
         "codeSidecar.api.temperature": {
           "type": "number",
-          "default": 0.7,
+          "default": 0,
           "minimum": 0,
           "maximum": 2,
-          "description": "Temperature for LLM responses (0-2)"
+          "description": "Temperature for LLM responses (0-2). Lower values = more deterministic. Recommended: 0 for code tasks."
         },
         "codeSidecar.api.maxTokens": {
           "type": "number",
-          "default": 4096,
+          "default": 16384,
           "minimum": 1,
-          "description": "Maximum tokens for LLM responses"
+          "description": "Maximum tokens for LLM responses. Higher values allow longer code generation."
         },
         "codeSidecar.permissions.allowReadByDefault": {
           "type": "boolean",
@@ -101,16 +101,16 @@
         },
         "codeSidecar.maxLoopCount": {
           "type": "number",
-          "default": 25,
+          "default": 50,
           "minimum": 1,
-          "maximum": 100,
-          "description": "Maximum number of ReAct loop iterations"
+          "maximum": 200,
+          "description": "Maximum number of ReAct loop iterations per task"
         },
         "codeSidecar.contextWindowSize": {
           "type": "number",
-          "default": 100000,
+          "default": 128000,
           "minimum": 1000,
-          "description": "Maximum context window size in characters"
+          "description": "Context window size in tokens. Should match your model's context limit."
         }
       }
     }

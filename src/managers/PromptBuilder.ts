@@ -3,256 +3,138 @@ import { ModeManager } from "./ModeManager";
 import { ToolExecutor } from "../tools";
 import * as os from "os";
 
-/**
- * PromptBuilder dynamically constructs system prompts
- */
 export class PromptBuilder {
-  constructor(
-    private modeManager: ModeManager,
-    private toolExecutor: ToolExecutor
-  ) {}
+	constructor(
+		private modeManager: ModeManager,
+		private toolExecutor: ToolExecutor
+	) {}
 
-  /**
-   * Build the complete system prompt
-   */
-  public buildSystemPrompt(): string {
-    const sections: string[] = [];
+	public buildSystemPrompt(): string {
+		const sections: string[] = [];
+		sections.push(this.getRoleSection());
+		sections.push(this.modeManager.getCurrentModePromptFragment());
+		sections.push(this.getToolDefinitionsSection());
+		sections.push(this.getContextSection());
+		sections.push(this.getWorkflowSection());
+		sections.push(this.getRulesSection());
+		return sections.join("\n\n");
+	}
 
-    // 1. Role and Identity
-    sections.push(this.getRoleSection());
+	private getRoleSection(): string {
+		const mode = this.modeManager.getCurrentModeDefinition();
+		return `# Identity
 
-    // 2. Current Mode Fragment
-    sections.push(this.modeManager.getCurrentModePromptFragment());
+You are an expert software engineer embedded in VS Code. You think carefully, then act precisely.
 
-    // 3. Tool Definitions
-    sections.push(this.getToolDefinitionsSection());
+**Current Mode**: ${mode.icon} ${mode.name} — ${mode.description}
 
-    // 4. Context Information
-    sections.push(this.getContextSection());
+## Principles
+1. **Read before edit** — Always read files before changing them. Never guess.
+2. **Minimal changes** — Use \`edit\` for targeted edits. Use \`write_file\` only for new files.
+3. **Verify** — Run build/lint/test via \`execute_command\` after making changes.
+4. **One tool per response** — Call exactly one tool, then reason about the result.
+5. **Bash is universal** — Use \`execute_command\` for anything not covered by other tools: file search, git, diagnostics, project exploration.`;
+	}
 
-    // 5. Capabilities
-    sections.push(this.getCapabilitiesSection());
+	private getToolDefinitionsSection(): string {
+		const tools = this.toolExecutor.getToolDefinitions();
 
-    // 6. Rules and Guidelines
-    sections.push(this.getRulesSection());
+		if (tools.length === 0) {
+			return "# Tools\n\nNo tools available.";
+		}
 
-    // 7. Goal
-    sections.push(this.getGoalSection());
+		let section = "# Tools\n\n";
+		section += "You have exactly these tools. Use XML tags to call them, one per response.\n\n";
 
-    // 8. Important
-    sections.push(this.getImportantSection());
+		for (const tool of tools) {
+			section += `## ${tool.name}\n`;
+			section += `${tool.description}\n`;
 
-    return sections.join("\n\n");
-  }
+			if (tool.parameters.length > 0) {
+				for (const param of tool.parameters) {
+					const req = param.required ? "required" : "optional";
+					section += `- \`${param.name}\` (${param.type}, ${req}): ${param.description}\n`;
+				}
+			}
 
-  /**
-   * Get role and identity section
-   */
-  private getRoleSection(): string {
-    const mode = this.modeManager.getCurrentModeDefinition();
-    return `# AI Coding Assistant
+			section += "```xml\n";
+			section += `<${tool.name}>\n`;
+			for (const param of tool.parameters.filter((p) => p.required)) {
+				section += `<${param.name}>value</${param.name}>\n`;
+			}
+			section += `</${tool.name}>\n`;
+			section += "```\n\n";
+		}
 
-You are an AI coding assistant integrated into Visual Studio Code. You help developers with code analysis, debugging, refactoring, and implementation tasks.
+		return section;
+	}
 
-**Current Mode**: ${mode.icon} ${mode.name} - ${mode.description}`;
-  }
+	private getContextSection(): string {
+		const workspaceFolders = vscode.workspace.workspaceFolders;
+		const workspacePath =
+			workspaceFolders && workspaceFolders.length > 0
+				? workspaceFolders[0].uri.fsPath
+				: "No workspace open";
+		const shell = os.platform() === "win32" ? "powershell" : process.env.SHELL || "/bin/bash";
 
-  /**
-   * Get tool definitions section
-   * Requirements: 13.1, 13.2
-   */
-  private getToolDefinitionsSection(): string {
-    const tools = this.toolExecutor.getToolDefinitions();
+		return `# Environment
+- OS: ${os.platform()} ${os.arch()}
+- Workspace: ${workspacePath}
+- Shell: ${shell}`;
+	}
 
-    if (tools.length === 0) {
-      return "# Available Tools\n\nNo tools are currently available.";
-    }
+	private getWorkflowSection(): string {
+		return `# Workflow
 
-    let section = "# Available Tools\n\n";
-    section +=
-      "You have access to the following tools to interact with the project:\n\n";
+1. **Understand** — Read the request. Identify files and scope. State assumptions if ambiguous.
+2. **Investigate** — Use \`read_file\` to view files. Use \`execute_command\` to explore:
+   - \`find . -name "*.ts" -not -path "*/node_modules/*"\` to list files
+   - \`grep -rn "pattern" src/\` to search code
+   - \`git status\`, \`git diff\`, \`git log --oneline -20\` for version control
+   - \`cat .eslintrc* package.json\` to understand project setup
+3. **Plan** — Think through changes. For multi-file edits, determine the order.
+4. **Execute** — Make changes with \`edit\` (preferred) or \`write_file\` (new files only).
+5. **Verify** — Run linters, type checks, or tests via \`execute_command\`.
+6. **Complete** — Call \`attempt_completion\` with a summary.
 
-    for (const tool of tools) {
-      section += `## ${tool.name}\n\n`;
-      section += `${tool.description}\n\n`;
+## edit Tips
+- The \`search\` text must match the file exactly (including indentation)
+- If an edit fails, re-read the file and retry with correct content
+- For insertions, include a few lines of surrounding context in \`search\`
+- Do not retry the same failing edit — re-read first
+- **For files with HTML/XML/JSX**: Keep \`search\` as short as possible — use only 2-5 unique lines. Avoid including large blocks of markup in search or replace, as angle brackets can interfere with parameter parsing
+- When editing HTML/template files, prefer using \`write_file\` for large changes instead of many small edits`;
+	}
 
-      if (tool.parameters.length > 0) {
-        section += "**Parameters:**\n\n";
-        for (const param of tool.parameters) {
-          const required = param.required ? "(required)" : "(optional)";
-          section += `- \`${param.name}\` (${param.type}) ${required}: ${param.description}\n`;
-        }
-        section += "\n";
-      }
+	private getRulesSection(): string {
+		const mode = this.modeManager.getCurrentModeDefinition();
+		const maxEdits = mode.maxFileEdits;
 
-      section += "**Usage Example:**\n\n";
-      section += "```xml\n";
-      section += `<${tool.name}>\n`;
-      for (const param of tool.parameters.filter((p) => p.required)) {
-        section += `<${param.name}>value</${param.name}>\n`;
-      }
-      section += `</${tool.name}>\n`;
-      section += "```\n\n";
-    }
+		let editRule: string;
+		if (maxEdits === 0) {
+			editRule = "- **Read-only mode**: Do not modify files unless explicitly asked";
+		} else if (maxEdits !== undefined) {
+			editRule = `- **Edit budget**: Limit modifications to ${maxEdits} files per task`;
+		} else {
+			editRule = "- Modify files as needed to complete the task";
+		}
 
-    section += this.getToolUsageInstructions();
+		return `# Rules
 
-    return section;
-  }
+${editRule}
+- Read a file before editing it
+- Preserve existing code style and conventions
+- Be direct — skip pleasantries, focus on the task
+- Never expose secrets or credentials
+- Never run destructive commands without user confirmation
+- If stuck after two attempts, explain and ask for guidance`;
+	}
 
-  /**
-   * Get tool usage instructions
-   */
-  private getToolUsageInstructions(): string {
-    return `## Tool Usage Instructions
+	public setModeManager(modeManager: ModeManager): void {
+		this.modeManager = modeManager;
+	}
 
-Tool uses are formatted using XML-style tags. The tool name itself becomes the XML tag name. Each parameter is enclosed within its own set of tags.
-
-**Important Rules:**
-1. Always use the exact tool name as the XML tag name
-2. Each parameter must be in its own tag
-3. Required parameters must be provided
-4. Tool calls must be properly formatted XML
-5. You can call multiple tools in sequence
-
-**Example:**
-\`\`\`xml
-<tool_name>
-<parameter1>value1</parameter1>
-<parameter2>value2</parameter2>
-</tool_name>
-\`\`\`
-`;
-  }
-
-  /**
-   * Get context information section
-   */
-  private getContextSection(): string {
-    const workspaceFolders = vscode.workspace.workspaceFolders;
-    const workspacePath =
-      workspaceFolders && workspaceFolders.length > 0
-        ? workspaceFolders[0].uri.fsPath
-        : "No workspace open";
-
-    return `# Context Information
-
-**Operating System**: ${os.platform()} (${os.arch()})
-**Workspace**: ${workspacePath}`;
-  }
-
-  /**
-   * Get capabilities section
-   */
-  private getCapabilitiesSection(): string {
-    return `# Capabilities
-
-You can:
-- Read and analyze code files
-- Write and modify files (with user permission)
-- Search for patterns in the codebase
-- Execute commands in the terminal
-- Access diagnostic information (errors, warnings)
-- Navigate the project structure
-- Inspect workspace skill folders and read their instructions when relevant
-- Provide explanations and suggestions
-
-Your responses should be:
-- Clear and concise
-- Technically accurate
-- Actionable and practical
-- Focused on the current mode's objectives`;
-  }
-
-  /**
-   * Get rules and guidelines section
-   */
-  private getRulesSection(): string {
-    const mode = this.modeManager.getCurrentModeDefinition();
-    const maxEdits = mode.maxFileEdits;
-
-    let editRestriction = "";
-    if (maxEdits === 0) {
-      editRestriction =
-        "- **File Editing**: Avoid making file changes unless explicitly requested";
-    } else if (maxEdits !== undefined) {
-      editRestriction = `- **File Editing**: Limit file modifications to ${maxEdits} files per task`;
-    } else {
-      editRestriction =
-        "- **File Editing**: You can modify files as needed for the task";
-    }
-
-    return `# Rules and Guidelines
-
-## General Rules:
-- Always use tools to interact with the project (don't make assumptions)
-- Verify information before making changes
-- Ask for clarification when requirements are unclear
-- Respect user permissions and confirmations
-- Provide reasoning for your actions
-- When a task may benefit from a workspace skill, use normal file tools to inspect .agent/skills, .code-sidecar/skills, or skills, then read the relevant SKILL.md
-
-## Mode-Specific Rules:
-${editRestriction}
-- Follow the guidelines specific to ${mode.name} mode
-- Stay focused on the mode's primary objectives
-
-## Markdown Formatting:
-- Use proper markdown syntax in your responses
-- Format code blocks with appropriate language tags
-- Use lists, headers, and emphasis for clarity
-
-## Error Handling:
-- If a tool fails, explain the error and suggest alternatives
-- Don't retry the same failing operation repeatedly
-- Ask for user input when stuck`;
-  }
-
-  /**
-   * Get goal section
-   */
-  private getGoalSection(): string {
-    return `# Goal
-
-Your goal is to assist the developer effectively by:
-1. Understanding their request or problem
-2. Using available tools to gather information
-3. Analyzing the situation and forming a plan
-4. Taking appropriate actions using tools
-5. Providing clear explanations and results
-
-Always think step-by-step and use tools to accomplish tasks. When you've completed the task, use the appropriate completion tool to signal you're done.`;
-  }
-
-  /**
-   * Get Important section
-   */
-  private getImportantSection(): string {
-    return `# Important Instructions
-
-    
-1. Only analyze a project when the user explicitly requests analysis.
-   - Do NOT proactively analyze projects.
-   - Avoid overusing tools.
-   - Before using any tool, think carefully and ensure it is truly necessary.
-
-2. When finishing any response, you MUST always use the tool: \`attempt_completion\`.
-   - This applies to every final answer without exception.
-   
-3.Keep the output concise and focused strictly on executing the task. Do not include unnecessary explanations or commentary.`;
-  }
-
-  /**
-   * Update the mode manager (for mode switching)
-   */
-  public setModeManager(modeManager: ModeManager): void {
-    this.modeManager = modeManager;
-  }
-
-  /**
-   * Get the current mode manager
-   */
-  public getModeManager(): ModeManager {
-    return this.modeManager;
-  }
+	public getModeManager(): ModeManager {
+		return this.modeManager;
+	}
 }
